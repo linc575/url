@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BizCommand — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #161a23;
+    --surface2: #1e2433;
+    --border:   #272d3d;
+    --accent:   #6c63ff;
+    --accent2:  #00d4aa;
+    --accent3:  #ff6b6b;
+    --accent4:  #ffd93d;
+    --text:     #e8eaf0;
+    --muted:    #7a8099;
+    --sidebar-w: 230px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .brand { padding: 24px 20px 20px; display: flex; align-items: center; gap: 10px; }
+  .brand-icon { width: 34px; height: 34px; background: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .brand-name { font-weight: 700; font-size: 16px; letter-spacing: .3px; }
+  .brand-name span { color: var(--accent); }
+
+  nav { flex: 1; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 14px 8px 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 8px;
+    cursor: pointer; font-size: 13.5px; color: var(--muted); transition: all .15s;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(108,99,255,.15); color: var(--accent); font-weight: 600; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .badge { margin-left: auto; background: var(--accent3); color: #fff; font-size: 10px; border-radius: 20px; padding: 1px 6px; font-weight: 700; }
+
+  .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+  .user-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+  .user-row:hover { background: var(--surface2); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,var(--accent),var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .user-info .name { font-size: 13px; font-weight: 600; }
+  .user-info .role { font-size: 11px; color: var(--muted); }
+
+  /* ── LOGIN ── */
+  #login-overlay {
+    position: fixed; inset: 0; z-index: 1000; display: flex;
+    align-items: center; justify-content: center; padding: 24px;
+    background: radial-gradient(1200px 600px at 50% -10%, rgba(108,99,255,.18), transparent 60%), var(--bg);
+  }
+  #login-overlay.hidden { display: none; }
+  .login-card {
+    width: 100%; max-width: 380px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 16px; padding: 34px 32px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  }
+  .login-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; }
+  .login-brand .brand-icon { width: 38px; height: 38px; font-size: 19px; }
+  .login-brand .brand-name { font-weight: 700; font-size: 18px; letter-spacing: .3px; }
+  .login-brand .brand-name span { color: var(--accent); }
+  .login-sub { color: var(--muted); font-size: 13px; margin: 14px 0 24px; }
+  .login-field { margin-bottom: 16px; }
+  .login-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; text-transform: uppercase; letter-spacing: .5px; }
+  .login-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 11px 14px; color: var(--text); font-size: 14px; outline: none;
+    transition: border-color .15s;
+  }
+  .login-input:focus { border-color: var(--accent); }
+  .login-input::placeholder { color: var(--muted); }
+  .login-btn {
+    width: 100%; background: var(--accent); border: none; color: #fff; font-weight: 600;
+    font-size: 14px; padding: 12px; border-radius: 9px; cursor: pointer; margin-top: 6px;
+    transition: background .15s;
+  }
+  .login-btn:hover { background: #5a52d5; }
+  .login-error {
+    color: var(--accent3); font-size: 12.5px; margin-top: 14px; min-height: 16px; text-align: center;
+  }
+  .login-hint { color: var(--muted); font-size: 11.5px; text-align: center; margin-top: 14px; }
+  .login-hint code { background: var(--surface2); padding: 1px 6px; border-radius: 5px; color: var(--text); }
+  .login-hint a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .login-hint a:hover { text-decoration: underline; }
+
+  /* ── OWNER PANEL ── */
+  .member-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .member-table thead th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 0 12px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .member-table tbody tr { border-bottom: 1px solid var(--border); }
+  .member-table tbody tr:last-child { border-bottom: none; }
+  .member-table tbody td { padding: 13px 12px; vertical-align: middle; }
+  .member-cell { display: flex; align-items: center; gap: 11px; }
+  .member-cell .avatar { width: 34px; height: 34px; }
+  .role-tag { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .role-owner     { background: rgba(108,99,255,.18); color: #a78bfa; }
+  .role-admin     { background: rgba(255,107,107,.16); color: #ff6b6b; }
+  .role-manager   { background: rgba(255,217,61,.16);  color: #ffd93d; }
+  .role-developer { background: rgba(14,165,233,.16);  color: #38bdf8; }
+  .role-designer  { background: rgba(236,72,153,.16);  color: #f472b6; }
+  .role-sales     { background: rgba(0,212,170,.15);   color: var(--accent2); }
+  .role-marketing { background: rgba(249,115,22,.16);  color: #fb923c; }
+  .role-support   { background: rgba(34,211,238,.15);  color: #22d3ee; }
+  .role-finance   { background: rgba(148,163,184,.18); color: #cbd5e1; }
+  .role-member    { background: rgba(0,212,170,.15);   color: var(--accent2); }
+  .role-viewer    { background: rgba(122,128,153,.18); color: var(--muted); }
+  .kick-btn {
+    background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.3); color: var(--accent3);
+    border-radius: 8px; padding: 6px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .kick-btn:hover { background: var(--accent3); color: #fff; }
+  .kick-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .add-member-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .add-member-row .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 130px; }
+  .add-member-row label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .add-member-row input, .add-member-row select {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; color: var(--text); font-size: 13px; outline: none;
+  }
+  .add-member-row input:focus, .add-member-row select:focus { border-color: var(--accent); }
+  .panel-msg { font-size: 12.5px; margin-top: 12px; min-height: 16px; }
+  .panel-msg.error { color: var(--accent3); }
+  .panel-msg.ok { color: var(--accent2); }
+
+  /* ── MAIN ── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* topbar */
+  #topbar {
+    height: 60px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 28px; gap: 16px; flex-shrink: 0;
+  }
+  .page-title { font-size: 17px; font-weight: 700; flex: 1; }
+  .search-box {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 14px; color: var(--text); font-size: 13px; width: 220px; outline: none;
+  }
+  .search-box::placeholder { color: var(--muted); }
+  .topbar-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; transition: background .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .topbar-btn:hover { background: var(--border); }
+  .topbar-btn.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .topbar-btn.primary:hover { background: #5a52d5; }
+  .notif-dot { width: 8px; height: 8px; background: var(--accent3); border-radius: 50%; margin-top: -12px; margin-left: -8px; }
+
+  /* content */
+  #content { flex: 1; overflow-y: auto; padding: 28px; }
+  #content::-webkit-scrollbar { width: 6px; }
+  #content::-webkit-scrollbar-track { background: transparent; }
+  #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* pages */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* KPI cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--card-color, var(--accent));
+  }
+  .kpi-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+  .kpi-sub { font-size: 12px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .up { color: var(--accent2); } .down { color: var(--accent3); }
+  .kpi-icon { position: absolute; top: 18px; right: 18px; font-size: 22px; opacity: .25; }
+
+  /* charts row */
+  .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px;
+  }
+  .card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+
+  /* bottom row */
+  .bottom-row { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+
+  /* table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 0 0 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 11px 0; vertical-align: middle; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .pill.success { background: rgba(0,212,170,.15); color: var(--accent2); }
+  .pill.pending { background: rgba(255,217,61,.15); color: var(--accent4); }
+  .pill.failed  { background: rgba(255,107,107,.15); color: var(--accent3); }
+
+  /* activity feed */
+  .activity-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .activity-item:last-child { border-bottom: none; }
+  .a-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .a-text { font-size: 13px; line-height: 1.4; }
+  .a-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* tasks page */
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+  }
+  .task-check {
+    width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 5px;
+    cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .task-check.done { background: var(--accent2); border-color: var(--accent2); }
+  .task-content { flex: 1; }
+  .task-name { font-size: 13.5px; }
+  .task-name.done-text { text-decoration: line-through; color: var(--muted); }
+  .task-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .task-priority { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .p-high { background: rgba(255,107,107,.15); color: var(--accent3); }
+  .p-med  { background: rgba(255,217,61,.15);  color: var(--accent4); }
+  .p-low  { background: rgba(0,212,170,.15);   color: var(--accent2); }
+
+  /* revenue page */
+  .rev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+
+  /* customers page */
+  .customers-search { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text); font-size: 13px; outline: none; margin-bottom: 18px; }
+
+  /* team page */
+  .team-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; text-align: center; }
+  .team-avatar { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
+  .team-name { font-size: 15px; font-weight: 700; }
+  .team-role { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .team-stats { display: flex; justify-content: center; gap: 18px; margin-top: 14px; }
+  .team-stat { text-align: center; }
+  .team-stat .val { font-size: 16px; font-weight: 700; }
+  .team-stat .lbl { font-size: 11px; color: var(--muted); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .online { background: var(--accent2); } .away { background: var(--accent4); } .offline { background: var(--muted); }
+
+  /* settings */
+  .settings-section { margin-bottom: 28px; }
+  .settings-label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 8px; }
+  .settings-row .sr-left .sr-title { font-size: 14px; font-weight: 600; }
+  .settings-row .sr-left .sr-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .toggle { width: 38px; height: 22px; border-radius: 11px; background: var(--border); position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
+  .toggle.on { background: var(--accent); }
+  .toggle::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: left .2s; }
+  .toggle.on::after { left: 19px; }
+  .settings-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 13px; width: 240px; outline: none; }
+
+  /* ── ANALYZER ── */
+  .analyzer-hero { text-align: center; padding: 40px 20px 32px; }
+  .analyzer-hero h2 { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+  .analyzer-hero p { color: var(--muted); font-size: 14px; max-width: 520px; margin: 0 auto; }
+  .analyzer-input-row { display: flex; gap: 12px; max-width: 620px; margin: 28px auto 0; }
+  .analyzer-input {
+    flex: 1; background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 13px 18px; color: var(--text); font-size: 15px; outline: none;
+    transition: border-color .2s;
+  }
+  .analyzer-input:focus { border-color: var(--accent); }
+  .analyzer-btn {
+    background: var(--accent); border: none; color: #fff; font-size: 14px; font-weight: 700;
+    padding: 13px 24px; border-radius: 10px; cursor: pointer; transition: background .15s; white-space: nowrap;
+  }
+  .analyzer-btn:hover { background: #5a52d5; }
+  .analyzer-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 18px auto 0; max-width: 680px; }
+  .chip {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+    padding: 5px 14px; font-size: 12px; cursor: pointer; transition: all .15s; color: var(--muted);
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,.08); }
+  .analyzer-results { max-width: 860px; margin: 32px auto 0; }
+  .analyzer-business-title {
+    font-size: 20px; font-weight: 800; margin-bottom: 6px;
+  }
+  .analyzer-subtitle { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .problems-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .problem-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; opacity: 0; transform: translateY(12px);
+    animation: fadeUp .35s forwards;
+  }
+  @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+  .problem-card:nth-child(1) { animation-delay:.05s }
+  .problem-card:nth-child(2) { animation-delay:.1s }
+  .problem-card:nth-child(3) { animation-delay:.15s }
+  .problem-card:nth-child(4) { animation-delay:.2s }
+  .problem-card:nth-child(5) { animation-delay:.25s }
+  .problem-card:nth-child(6) { animation-delay:.3s }
+  .problem-card:nth-child(7) { animation-delay:.35s }
+  .problem-card:nth-child(8) { animation-delay:.4s }
+  .prob-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .prob-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+  .prob-title { font-size: 14px; font-weight: 700; line-height: 1.3; }
+  .prob-desc { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
+  .prob-solution { font-size: 12px; background: var(--surface2); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 6px 6px 0; color: var(--text); line-height: 1.5; }
+  .prob-solution strong { color: var(--accent); }
+  .prob-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .prob-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: rgba(108,99,255,.12); color: var(--accent); font-weight: 600; }
+  .no-match { text-align:center; color:var(--muted); padding:40px 0; font-size:14px; }
+  .typing-indicator { display:inline-flex; gap:4px; align-items:center; padding:8px 0; }
+  .typing-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); animation:bounce .6s infinite; }
+  .typing-dot:nth-child(2){animation-delay:.15s} .typing-dot:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,80%,100%{transform:scale(1)}40%{transform:scale(1.4)}}
+
+  /* add task input */
+  .add-task-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .add-task-input { flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
+  .add-task-input:focus { border-color: var(--accent); }
+  .task-select { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px; outline: none; cursor: pointer; }
+  .task-select:focus { border-color: var(--accent); }
+  .task-select.inline { padding: 4px 8px; font-size: 11.5px; border-radius: 7px; background: var(--surface2); }
+  .task-assignee { display: inline-flex; align-items: center; gap: 6px; }
+  .task-assignee .mini-avatar { width: 18px; height: 18px; border-radius: 50%; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+  .task-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 6px; flex-shrink: 0; }
+  .task-del:hover { color: var(--accent3); background: rgba(255,107,107,.12); }
+
+  /* section header row */
+  .section-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .section-row .card-title { margin-bottom: 0; }
+  .see-all { font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: none; }
+  .see-all:hover { text-decoration: underline; }
+
+  /* mini progress bar */
+  .progress-bar-bg { background: var(--surface2); border-radius: 4px; height: 6px; margin-top: 4px; }
+  .progress-bar-fill { height: 6px; border-radius: 4px; background: var(--accent); transition: width .4s; }
+
+  /* responsive charts */
+  .chart-wrap { position: relative; }
+
+  /* ── ANOMALY BANNER ── */
+  #anomaly-banner { margin-bottom: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .anomaly-alert {
+    display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 11px;
+    font-size: 13.5px; border: 1px solid var(--border); position: relative;
+  }
+  .anomaly-alert .a-emoji { font-size: 18px; flex-shrink: 0; }
+  .anomaly-alert .a-body { flex: 1; }
+  .anomaly-alert .a-body strong { font-weight: 700; }
+  .anomaly-alert .a-delta { font-weight: 800; margin-left: 4px; }
+  .anomaly-bad  { background: rgba(255,107,107,.10); border-color: rgba(255,107,107,.35); }
+  .anomaly-bad .a-delta { color: var(--accent3); }
+  .anomaly-good { background: rgba(0,212,170,.10); border-color: rgba(0,212,170,.35); }
+  .anomaly-good .a-delta { color: var(--accent2); }
+  .anomaly-dismiss {
+    background: none; border: none; color: var(--muted); cursor: pointer; font-size: 17px;
+    line-height: 1; padding: 4px 6px; border-radius: 6px; flex-shrink: 0;
+  }
+  .anomaly-dismiss:hover { color: var(--text); background: rgba(255,255,255,.06); }
+
+  /* ── BUILD THIS BUTTON ── */
+  .build-btn {
+    margin-top: 14px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent);
+    border-radius: 8px; padding: 7px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .build-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .build-btn.copied { background: var(--accent2); color: #06241d; border-color: var(--accent2); }
+
+  /* ── INVOICE GENERATOR ── */
+  .invoice-layout { display: grid; grid-template-columns: 340px 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 920px) { .invoice-layout { grid-template-columns: 1fr; } }
+  .invoice-form .field { margin-bottom: 15px; }
+  .invoice-form label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  .invoice-form input, .invoice-form textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 13px; color: var(--text); font-size: 13.5px; outline: none; font-family: inherit;
+  }
+  .invoice-form input:focus, .invoice-form textarea:focus { border-color: var(--accent); }
+  .invoice-form textarea { resize: vertical; min-height: 70px; }
+
+  /* the printable document — light + professional, regardless of dark theme */
+  #invoice-paper {
+    background: #ffffff; color: #1a1f2e; border-radius: 12px; padding: 44px 46px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.4); font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  #invoice-paper .inv-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #ececf2; padding-bottom: 22px; margin-bottom: 26px; }
+  #invoice-paper .inv-biz { font-size: 22px; font-weight: 800; color: #6c63ff; letter-spacing: -.3px; }
+  #invoice-paper .inv-biz-sub { font-size: 12px; color: #8a8fa3; margin-top: 4px; }
+  #invoice-paper .inv-label { font-size: 28px; font-weight: 800; color: #1a1f2e; letter-spacing: 3px; text-transform: uppercase; text-align: right; }
+  #invoice-paper .inv-meta { font-size: 12px; color: #8a8fa3; text-align: right; margin-top: 6px; line-height: 1.7; }
+  #invoice-paper .inv-billto-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a8fa3; margin-bottom: 5px; }
+  #invoice-paper .inv-billto-name { font-size: 16px; font-weight: 700; margin-bottom: 28px; }
+  #invoice-paper table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  #invoice-paper thead th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #8a8fa3; border-bottom: 2px solid #ececf2; padding: 0 0 11px; }
+  #invoice-paper thead th:last-child, #invoice-paper td:last-child { text-align: right; }
+  #invoice-paper tbody td { padding: 16px 0; font-size: 14px; border-bottom: 1px solid #f1f1f6; vertical-align: top; }
+  #invoice-paper .inv-total-row { display: flex; justify-content: flex-end; gap: 60px; font-size: 15px; padding: 6px 0; }
+  #invoice-paper .inv-total-row.grand { font-size: 20px; font-weight: 800; color: #6c63ff; border-top: 2px solid #ececf2; margin-top: 8px; padding-top: 16px; }
+  #invoice-paper .inv-foot { margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f1f6; font-size: 12px; color: #8a8fa3; text-align: center; }
+
+  @media print {
+    body * { visibility: hidden !important; }
+    #invoice-paper, #invoice-paper * { visibility: visible !important; }
+    #invoice-paper { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border-radius: 0; padding: 0; }
+  }
+
+  /* ── AI CHAT ASSISTANT ── */
+  #chat-bubble {
+    position: fixed; bottom: 26px; right: 26px; width: 58px; height: 58px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none; cursor: pointer; font-size: 25px; z-index: 900;
+    box-shadow: 0 8px 28px rgba(108,99,255,.5); display: flex; align-items: center; justify-content: center;
+    transition: transform .15s, background .15s;
+  }
+  #chat-bubble:hover { transform: scale(1.07); background: #5a52d5; }
+  #chat-panel {
+    position: fixed; bottom: 96px; right: 26px; width: 380px; max-width: calc(100vw - 40px);
+    height: 540px; max-height: calc(100vh - 130px); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; z-index: 901; display: none; flex-direction: column; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  }
+  #chat-panel.open { display: flex; }
+  .chat-header { display: flex; align-items: center; gap: 11px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .chat-header .chat-bot-avatar { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg,var(--accent),var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .chat-header .ch-title { font-size: 14px; font-weight: 700; }
+  .chat-header .ch-sub { font-size: 11px; color: var(--accent2); }
+  .chat-header .chat-close { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px 8px; border-radius: 6px; }
+  .chat-header .chat-close:hover { color: var(--text); background: var(--surface2); }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .chat-messages::-webkit-scrollbar { width: 6px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .chat-msg { max-width: 85%; padding: 10px 13px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .chat-msg.bot { background: var(--surface2); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .chat-msg.user { background: var(--accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .chat-msg.error { background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.35); color: var(--accent3); align-self: flex-start; }
+  .chat-suggestions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+  .chat-chip { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: 11.5px; padding: 6px 11px; border-radius: 20px; cursor: pointer; transition: all .15s; }
+  .chat-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chat-input-row { display: flex; gap: 9px; padding: 14px; border-top: 1px solid var(--border); }
+  .chat-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 13px; color: var(--text); font-size: 13px; outline: none; }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-send { background: var(--accent); border: none; color: #fff; border-radius: 9px; padding: 0 15px; font-size: 15px; cursor: pointer; }
+  .chat-send:hover { background: #5a52d5; }
+  .chat-typing { display: flex; gap: 4px; padding: 12px 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; align-self: flex-start; width: fit-content; }
+  .chat-typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: chatdot 1.1s infinite; }
+  .chat-typing span:nth-child(2) { animation-delay: .18s; }
+  .chat-typing span:nth-child(3) { animation-delay: .36s; }
+  @keyframes chatdot { 0%,60%,100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-name">Biz<span>Command</span></div>
+    </div>
+
+    <!-- SIGN IN VIEW -->
+    <form id="signin-view" onsubmit="return handleLogin(event)">
+      <div class="login-sub">Sign in to your dashboard</div>
+      <div class="login-field">
+        <label for="login-user">Username</label>
+        <input class="login-input" id="login-user" type="text" placeholder="admin" autocomplete="username" autofocus />
+      </div>
+      <div class="login-field">
+        <label for="login-pass">Password</label>
+        <input class="login-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="login-btn" type="submit">Sign In</button>
+      <div class="login-error" id="login-error"></div>
+      <div class="login-hint">
+        Don't have an account? <a href="#" onclick="showAuthView('register');return false">Register</a>
+      </div>
+      <div class="login-hint">Demo owner — <code>admin</code> / <code>admin</code></div>
+    </form>
+
+    <!-- REGISTER VIEW -->
+    <form id="register-view" style="display:none" onsubmit="return handleRegister(event)">
+      <div class="login-sub">Create your account</div>
+      <div class="login-field">
+        <label for="reg-user">Username</label>
+        <input class="login-input" id="reg-user" type="text" placeholder="jane" autocomplete="username" />
+      </div>
+      <div class="login-field">
+        <label for="reg-email">Email <span style="text-transform:none">(optional)</span></label>
+        <input class="login-input" id="reg-email" type="email" placeholder="jane@bizcommand.io" autocomplete="email" />
+      </div>
+      <div class="login-field">
+        <label for="reg-pass">Password</label>
+        <input class="login-input" id="reg-pass" type="password" placeholder="At least 4 characters" autocomplete="new-password" />
+      </div>
+      <button class="login-btn" type="submit">Create Account</button>
+      <div class="login-error" id="register-error"></div>
+      <div class="login-hint">
+        Already have an account? <a href="#" onclick="showAuthView('signin');return false">Sign in</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="brand">
+    <div class="brand-icon">⚡</div>
+    <div class="brand-name">Biz<span>Command</span></div>
+  </div>
+
+  <nav>
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="showPage('overview',this)">
+      <span class="icon">📊</span> Overview
+    </div>
+    <div class="nav-item" onclick="showPage('revenue',this)">
+      <span class="icon">💰</span> Revenue
+    </div>
+    <div class="nav-item" onclick="showPage('customers',this)">
+      <span class="icon">👥</span> Customers
+    </div>
+    <div class="nav-item" onclick="showPage('invoices',this)">
+      <span class="icon">🧾</span> Invoices
+    </div>
+    <div class="nav-item" onclick="showPage('tasks',this)">
+      <span class="icon">✅</span> Tasks
+      <span class="badge" id="task-badge">4</span>
+    </div>
+
+    <div class="nav-section">Manage</div>
+    <div class="nav-item" onclick="showPage('team',this)">
+      <span class="icon">🧑‍💼</span> Team
+    </div>
+    <div class="nav-item" onclick="showPage('analyzer',this)">
+      <span class="icon">🧠</span> Biz Analyzer
+    </div>
+    <div class="nav-item" onclick="showPage('settings',this)">
+      <span class="icon">⚙️</span> Settings
+    </div>
+    <div class="nav-item" id="nav-owner" style="display:none" onclick="showPage('owner',this)">
+      <span class="icon">👑</span> Owner Panel
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-row" onclick="logout()" title="Sign out">
+      <div class="avatar">L</div>
+      <div class="user-info">
+        <div class="name">Lincoln</div>
+        <div class="role">Owner · Admin</div>
+      </div>
+      <span class="icon" style="margin-left:auto;font-size:15px;">🚪</span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div class="page-title" id="page-title">Overview</div>
+    <input class="search-box" placeholder="🔍  Search anything…" />
+    <button class="topbar-btn" onclick="alert('Notifications: all caught up! 🎉')">🔔 <div class="notif-dot"></div></button>
+    <button class="topbar-btn primary" onclick="showPage('tasks', document.querySelector(\'.nav-item:nth-child(5)\'))">+ Add Task</button>
+  </div>
+
+  <div id="content">
+
+    <!-- ═══════════════ OVERVIEW ═══════════════ -->
+    <div class="page active" id="page-overview">
+
+      <div id="anomaly-banner"></div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--card-color:#6c63ff">
+          <div class="kpi-icon">💵</div>
+          <div class="kpi-label">Monthly Revenue (MRR)</div>
+          <div class="kpi-value">$24,830</div>
+          <div class="kpi-sub up">▲ 12.4% vs last month</div>
+        </div>
+        <div class="kpi-card" style="--card-color:#00d4aa">
+          <div class="kpi-icon">👤</div>
+          <div class="kpi-label">Active Customers</div>
+          <div class="kpi-value">1,284</div>
+          <div class="kpi-sub up">▲ 38 new this month</div>
+        </div>
+        <div class="kpi-card" style="--card-color:#ff6b6b">
+          <div class="kpi-icon">📉</div>
+          <div class="kpi-label">Churn Rate</div>
+          <div class="kpi-value">2.1%</div>
+          <div class="kpi-sub down">▼ 0.3% improvement</div>
+        </div>
+        <div class="kpi-card" style="--card-color:#ffd93d">
+          <div class="kpi-icon">🎯</div>
+          <div class="kpi-label">Open Support Tickets</div>
+          <div class="kpi-value">17</div>
+          <div class="kpi-sub down">▲ 3 since yesterday</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="card">
+          <div class="section-row">
+            <div>
+              <div class="card-title">Revenue Trend</div>
+              <div class="card-sub">Monthly recurring revenue — last 12 months</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="revenueChart" height="90"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Revenue Sources</div>
+          <div class="card-sub">Breakdown by plan type</div>
+          <div class="chart-wrap"><canvas id="donutChart" height="160"></canvas></div>
+        </div>
+      </div>
+
+      <div class="bottom-row">
+        <div class="card">
+          <div class="section-row" style="margin-bottom:14px">
+            <div>
+              <div class="card-title">Recent Transactions</div>
+            </div>
+            <a class="see-all" onclick="showPage('revenue', document.querySelectorAll('.nav-item')[1])">See all →</a>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Customer</th><th>Plan</th><th>Amount</th><th>Date</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>Acme Corp</td><td>Enterprise</td><td>$499</td><td>Jun 6</td><td><span class="pill success">Paid</span></td></tr>
+              <tr><td>Nova Labs</td><td>Pro</td><td>$99</td><td>Jun 6</td><td><span class="pill success">Paid</span></td></tr>
+              <tr><td>SkyBridge</td><td>Starter</td><td>$29</td><td>Jun 5</td><td><span class="pill pending">Pending</span></td></tr>
+              <tr><td>Qubit Inc.</td><td>Pro</td><td>$99</td><td>Jun 5</td><td><span class="pill success">Paid</span></td></tr>
+              <tr><td>RedOak LLC</td><td>Enterprise</td><td>$499</td><td>Jun 4</td><td><span class="pill failed">Failed</span></td></tr>
+              <tr><td>Tidal Wave</td><td>Starter</td><td>$29</td><td>Jun 4</td><td><span class="pill success">Paid</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">Recent Activity</div>
+          <div class="activity-item">
+            <div class="a-icon" style="background:rgba(108,99,255,.2)">🆕</div>
+            <div><div class="a-text"><strong>Nova Labs</strong> upgraded to Pro plan</div><div class="a-time">2 hours ago</div></div>
+          </div>
+          <div class="activity-item">
+            <div class="a-icon" style="background:rgba(255,107,107,.2)">⚠️</div>
+            <div><div class="a-text"><strong>RedOak LLC</strong> payment failed — retry needed</div><div class="a-time">4 hours ago</div></div>
+          </div>
+          <div class="activity-item">
+            <div class="a-icon" style="background:rgba(0,212,170,.2)">✅</div>
+            <div><div class="a-text"><strong>SkyBridge</strong> signed up (Starter)</div><div class="a-time">6 hours ago</div></div>
+          </div>
+          <div class="activity-item">
+            <div class="a-icon" style="background:rgba(255,217,61,.2)">🎫</div>
+            <div><div class="a-text">New support ticket from <strong>Qubit Inc.</strong></div><div class="a-time">Yesterday</div></div>
+          </div>
+          <div class="activity-item">
+            <div class="a-icon" style="background:rgba(108,99,255,.2)">📧</div>
+            <div><div class="a-text">Monthly invoice emails sent to <strong>1,284</strong> customers</div><div class="a-time">Yesterday</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ REVENUE ═══════════════ -->
+    <div class="page" id="page-revenue">
+      <div class="rev-grid">
+        <div class="kpi-card" style="--card-color:#6c63ff">
+          <div class="kpi-icon">📈</div>
+          <div class="kpi-label">Annual Run Rate (ARR)</div>
+          <div class="kpi-value">$297,960</div>
+          <div class="kpi-sub up">▲ 18% YoY</div>
+        </div>
+        <div class="kpi-card" style="--card-color:#00d4aa">
+          <div class="kpi-icon">🧾</div>
+          <div class="kpi-label">Avg Revenue / User</div>
+          <div class="kpi-value">$19.34</div>
+          <div class="kpi-sub up">▲ $1.20 vs last month</div>
+        </div>
+        <div class="kpi-card" style="--card-color:#ffd93d">
+          <div class="kpi-icon">🔄</div>
+          <div class="kpi-label">Renewal Rate</div>
+          <div class="kpi-value">97.9%</div>
+          <div class="kpi-sub up">▲ 0.3% improvement</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Monthly Revenue by Plan</div>
+        <div class="card-sub">Starter · Pro · Enterprise</div>
+        <canvas id="stackedBarChart" height="80"></canvas>
+      </div>
+      <div class="card">
+        <div class="section-row" style="margin-bottom:14px">
+          <div class="card-title">All Transactions</div>
+          <button class="topbar-btn" onclick="exportTableToCSV('revenue-table','transactions.csv')">⬇ Export CSV</button>
+        </div>
+        <table id="revenue-table">
+          <thead><tr><th>Customer</th><th>Plan</th><th>Amount</th><th>Date</th><th>Status</th><th>Invoice</th></tr></thead>
+          <tbody>
+            <tr><td>Acme Corp</td><td>Enterprise</td><td>$499</td><td>Jun 6</td><td><span class="pill success">Paid</span></td><td style="color:var(--accent);cursor:pointer">View</td></tr>
+            <tr><td>Nova Labs</td><td>Pro</td><td>$99</td><td>Jun 6</td><td><span class="pill success">Paid</span></td><td style="color:var(--accent);cursor:pointer">View</td></tr>
+            <tr><td>SkyBridge</td><td>Starter</td><td>$29</td><td>Jun 5</td><td><span class="pill pending">Pending</span></td><td style="color:var(--accent);cursor:pointer">View</td></tr>
+            <tr><td>Qubit Inc.</td><td>Pro</td><td>$99</td><td>Jun 5</td><td><span class="pill success">Paid</span></td><td style="color:var(--accent);cursor:pointer">View</td></tr>
+            <tr><td>RedOak LLC</td><td>Enterprise</td><td>$499</td><td>Jun 4</td><td><span class="pill failed">Failed</span></td><td style="color:var(--accent);cursor:pointer">Retry</td></tr>
+            <tr><td>Tidal Wave</td><td>Starter</td><td>$29</td><td>Jun 4</td><td><span class="pill success">Paid</span></td><td style="color:var(--accent);cursor:pointer">View</td></tr>
+            <tr><td>Greenfield</td><td>Pro</td><td>$99</td><td>Jun 3</td><td><span class="pill success">Paid</span></td><td style="color:var(--accent);cursor:pointer">View</td></tr>
+            <tr><td>Ironclad Co</td><td>Enterprise</td><td>$499</td><td>Jun 2</td><td><span class="pill success">Paid</span></td><td style="color:var(--accent);cursor:pointer">View</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════════ CUSTOMERS ═══════════════ -->
+    <div class="page" id="page-customers">
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--card-color:#6c63ff"><div class="kpi-icon">👥</div><div class="kpi-label">Total Customers</div><div class="kpi-value">1,284</div><div class="kpi-sub up">▲ 38 this month</div></div>
+        <div class="kpi-card" style="--card-color:#00d4aa"><div class="kpi-icon">🌱</div><div class="kpi-label">Starter Plan</div><div class="kpi-value">742</div><div class="kpi-sub">57.8% of total</div></div>
+        <div class="kpi-card" style="--card-color:#ffd93d"><div class="kpi-icon">⭐</div><div class="kpi-label">Pro Plan</div><div class="kpi-value">398</div><div class="kpi-sub">31.0% of total</div></div>
+        <div class="kpi-card" style="--card-color:#ff6b6b"><div class="kpi-icon">🏆</div><div class="kpi-label">Enterprise Plan</div><div class="kpi-value">144</div><div class="kpi-sub">11.2% of total</div></div>
+      </div>
+      <div class="card">
+        <div class="section-row" style="margin-bottom:14px">
+          <div class="card-title">All Customers</div>
+          <button class="topbar-btn" onclick="exportTableToCSV('customer-table','customers.csv')">⬇ Export CSV</button>
+        </div>
+        <input class="customers-search" placeholder="🔍  Search customers by name, email, or plan…" oninput="filterCustomers(this.value)"/>
+        <table id="customer-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>MRR</th><th>Since</th><th>Status</th></tr></thead>
+          <tbody id="customer-tbody">
+            <tr><td>Acme Corp</td><td>billing@acme.com</td><td>Enterprise</td><td>$499</td><td>Jan 2024</td><td><span class="pill success">Active</span></td></tr>
+            <tr><td>Nova Labs</td><td>finance@novalabs.io</td><td>Pro</td><td>$99</td><td>Mar 2024</td><td><span class="pill success">Active</span></td></tr>
+            <tr><td>SkyBridge</td><td>accounts@skybridge.co</td><td>Starter</td><td>$29</td><td>May 2024</td><td><span class="pill pending">Trial</span></td></tr>
+            <tr><td>Qubit Inc.</td><td>pay@qubit.ai</td><td>Pro</td><td>$99</td><td>Feb 2024</td><td><span class="pill success">Active</span></td></tr>
+            <tr><td>RedOak LLC</td><td>admin@redoak.com</td><td>Enterprise</td><td>$499</td><td>Apr 2023</td><td><span class="pill failed">At Risk</span></td></tr>
+            <tr><td>Tidal Wave</td><td>hello@tidalwave.app</td><td>Starter</td><td>$29</td><td>Jun 2025</td><td><span class="pill success">Active</span></td></tr>
+            <tr><td>Greenfield</td><td>ops@greenfield.com</td><td>Pro</td><td>$99</td><td>Nov 2023</td><td><span class="pill success">Active</span></td></tr>
+            <tr><td>Ironclad Co</td><td>billing@ironclad.biz</td><td>Enterprise</td><td>$499</td><td>Sep 2022</td><td><span class="pill success">Active</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════════ TASKS ═══════════════ -->
+    <div class="page" id="page-tasks">
+      <div class="add-task-row">
+        <input class="add-task-input" id="new-task-input" placeholder="Add a new task and press Enter…" onkeydown="if(event.key==='Enter')createTask()"/>
+        <select class="task-select" id="new-task-assignee">
+          <option value="">Unassigned</option>
+        </select>
+        <select class="task-select" id="new-task-priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <button class="topbar-btn primary" onclick="createTask()">+ Add</button>
+      </div>
+
+      <div class="bottom-row" style="align-items:start">
+        <div>
+          <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">All Tasks</div>
+          <div class="task-list" id="task-list">
+            <div style="color:var(--muted);padding:14px 0">Loading tasks…</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">Goal Progress</div>
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>MRR Target ($30k)</span><span style="color:var(--accent)">83%</span></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:83%;background:var(--accent)"></div></div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>New Signups (50 goal)</span><span style="color:var(--accent2)">76%</span></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:76%;background:var(--accent2)"></div></div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Churn Reduction Goal</span><span style="color:var(--accent4)">60%</span></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:60%;background:var(--accent4)"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Support Ticket SLA</span><span style="color:var(--accent3)">42%</span></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:42%;background:var(--accent3)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ TEAM ═══════════════ -->
+    <div class="page" id="page-team">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:14px;color:var(--muted)">6 team members · 4 online</div>
+        <button class="topbar-btn primary" onclick="alert('Invite member flow coming soon!')">+ Invite Member</button>
+      </div>
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#6c63ff,#a78bfa)">L</div>
+          <div class="team-name">Lincoln</div>
+          <div class="team-role"><span class="status-dot online"></span>Founder · Owner</div>
+          <div class="team-stats">
+            <div class="team-stat"><div class="val">12</div><div class="lbl">Tasks</div></div>
+            <div class="team-stat"><div class="val">$24.8k</div><div class="lbl">MRR</div></div>
+          </div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#00d4aa,#0ea5e9)">S</div>
+          <div class="team-name">Sara M.</div>
+          <div class="team-role"><span class="status-dot online"></span>Head of Sales</div>
+          <div class="team-stats">
+            <div class="team-stat"><div class="val">8</div><div class="lbl">Tasks</div></div>
+            <div class="team-stat"><div class="val">38</div><div class="lbl">Leads</div></div>
+          </div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#ffd93d,#f97316)">J</div>
+          <div class="team-name">Jake T.</div>
+          <div class="team-role"><span class="status-dot away"></span>Lead Developer</div>
+          <div class="team-stats">
+            <div class="team-stat"><div class="val">21</div><div class="lbl">Tasks</div></div>
+            <div class="team-stat"><div class="val">94%</div><div class="lbl">Done</div></div>
+          </div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#ff6b6b,#ec4899)">A</div>
+          <div class="team-name">Amy R.</div>
+          <div class="team-role"><span class="status-dot online"></span>Customer Success</div>
+          <div class="team-stats">
+            <div class="team-stat"><div class="val">17</div><div class="lbl">Tickets</div></div>
+            <div class="team-stat"><div class="val">4.9★</div><div class="lbl">CSAT</div></div>
+          </div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#818cf8,#6c63ff)">M</div>
+          <div class="team-name">Marcus L.</div>
+          <div class="team-role"><span class="status-dot online"></span>Marketing</div>
+          <div class="team-stats">
+            <div class="team-stat"><div class="val">6</div><div class="lbl">Campaigns</div></div>
+            <div class="team-stat"><div class="val">3.2k</div><div class="lbl">Reach</div></div>
+          </div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar" style="background:linear-gradient(135deg,#94a3b8,#64748b)">K</div>
+          <div class="team-name">Kim D.</div>
+          <div class="team-role"><span class="status-dot offline"></span>Finance</div>
+          <div class="team-stats">
+            <div class="team-stat"><div class="val">3</div><div class="lbl">Reports</div></div>
+            <div class="team-stat"><div class="val">100%</div><div class="lbl">On time</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ OWNER PANEL ═══════════════ -->
+    <div class="page" id="page-owner">
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-title">👑 Team Members</div>
+        <div class="card-sub">Everyone with access to this BizCommand workspace. Owner only.</div>
+        <table class="member-table">
+          <thead>
+            <tr><th>Member</th><th>Email</th><th>Role</th><th>Joined</th><th style="text-align:right">Action</th></tr>
+          </thead>
+          <tbody id="members-tbody">
+            <tr><td colspan="5" style="color:var(--muted);padding:20px 12px">Loading members…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">➕ Add Member</div>
+        <div class="card-sub">Create an account for a new team member.</div>
+        <form class="add-member-row" onsubmit="return handleAddMember(event)">
+          <div class="field">
+            <label for="am-user">Username</label>
+            <input id="am-user" type="text" placeholder="jane" required />
+          </div>
+          <div class="field">
+            <label for="am-email">Email</label>
+            <input id="am-email" type="email" placeholder="jane@bizcommand.io" />
+          </div>
+          <div class="field">
+            <label for="am-pass">Password</label>
+            <input id="am-pass" type="text" placeholder="At least 4 chars" required />
+          </div>
+          <div class="field" style="flex:0 0 150px">
+            <label for="am-role">Role</label>
+            <select id="am-role">
+              <option value="member">Member</option>
+            </select>
+          </div>
+          <button class="topbar-btn primary" type="submit" style="height:38px">Add</button>
+        </form>
+        <div class="panel-msg" id="owner-msg"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ ANALYZER ═══════════════ -->
+    <div class="page" id="page-analyzer">
+      <div class="analyzer-hero">
+        <h2>🧠 Business Problem Analyzer</h2>
+        <p>Type any type of business and instantly see the most common problems it faces — each one solvable with code or software you could build.</p>
+        <div class="analyzer-input-row">
+          <input class="analyzer-input" id="biz-input" placeholder="e.g. Restaurant, Law Firm, Gym…" onkeydown="if(event.key==='Enter')runAnalysis()" />
+          <button class="analyzer-btn" onclick="runAnalysis()">Analyze →</button>
+        </div>
+        <div class="analyzer-chips" id="biz-chips"></div>
+      </div>
+      <div class="analyzer-results" id="analyzer-results"></div>
+    </div>
+
+    <!-- ═══════════════ INVOICES ═══════════════ -->
+    <div class="page" id="page-invoices">
+      <div class="invoice-layout">
+        <div class="card invoice-form">
+          <div class="card-title" style="margin-bottom:4px">Invoice Details</div>
+          <div class="card-sub">Fill in the fields, then generate a printable invoice.</div>
+          <div class="field">
+            <label for="inv-client">Client Name</label>
+            <input id="inv-client" type="text" placeholder="Acme Corp" oninput="renderInvoice()" />
+          </div>
+          <div class="field">
+            <label for="inv-desc">Service Description</label>
+            <textarea id="inv-desc" placeholder="Monthly software subscription — Pro plan" oninput="renderInvoice()"></textarea>
+          </div>
+          <div class="field">
+            <label for="inv-amount">Amount (USD)</label>
+            <input id="inv-amount" type="number" min="0" step="0.01" placeholder="499.00" oninput="renderInvoice()" />
+          </div>
+          <div class="field">
+            <label for="inv-due">Due Date</label>
+            <input id="inv-due" type="date" oninput="renderInvoice()" />
+          </div>
+          <button class="topbar-btn primary" style="width:100%;justify-content:center" onclick="printInvoice()">🖨 Generate Invoice</button>
+        </div>
+
+        <div id="invoice-paper">
+          <div class="inv-top">
+            <div>
+              <div class="inv-biz">BizCommand LLC</div>
+              <div class="inv-biz-sub">123 Commerce Way · billing@bizcommand.io</div>
+            </div>
+            <div>
+              <div class="inv-label">Invoice</div>
+              <div class="inv-meta">
+                Invoice #: <span id="inv-num">INV-0001</span><br>
+                Issued: <span id="inv-issued">—</span><br>
+                Due: <span id="inv-due-out">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="inv-billto-label">Bill To</div>
+          <div class="inv-billto-name" id="inv-client-out">Client Name</div>
+
+          <table>
+            <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr>
+                <td id="inv-desc-out">Service description will appear here.</td>
+                <td id="inv-amount-cell">$0.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="inv-total-row"><span>Subtotal</span><span id="inv-subtotal">$0.00</span></div>
+          <div class="inv-total-row grand"><span>Total Due</span><span id="inv-total">$0.00</span></div>
+
+          <div class="inv-foot">Thank you for your business! · BizCommand LLC · Payment due by the date above.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ SETTINGS ═══════════════ -->
+    <div class="page" id="page-settings">
+      <div class="settings-section">
+        <div class="settings-label">Account</div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Business Name</div><div class="sr-desc">Shown on invoices and emails</div></div>
+          <input class="settings-input" value="BizCommand LLC" />
+        </div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Owner Email</div><div class="sr-desc">Primary contact for billing</div></div>
+          <input class="settings-input" value="lincoln.kalonich@gmail.com" />
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Notifications</div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">New Signup Alerts</div><div class="sr-desc">Email when a new customer signs up</div></div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Failed Payment Alerts</div><div class="sr-desc">Email when a payment fails</div></div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Weekly Revenue Summary</div><div class="sr-desc">Digest every Monday morning</div></div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Churn Risk Alerts</div><div class="sr-desc">Notify when a customer looks at-risk</div></div>
+          <div class="toggle" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Integrations</div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Stripe</div><div class="sr-desc">Payment processing &amp; billing</div></div>
+          <span class="pill success">Connected</span>
+        </div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Slack</div><div class="sr-desc">Team notifications</div></div>
+          <button class="topbar-btn" onclick="alert('Slack integration coming soon!')">Connect</button>
+        </div>
+        <div class="settings-row">
+          <div class="sr-left"><div class="sr-title">Google Analytics</div><div class="sr-desc">Website traffic &amp; funnels</div></div>
+          <button class="topbar-btn" onclick="alert('Google Analytics integration coming soon!')">Connect</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══════════════ AI CHAT ASSISTANT ═══════════════ -->
+<button id="chat-bubble" onclick="toggleChat()" title="Ask the AI assistant">💬</button>
+<div id="chat-panel">
+  <div class="chat-header">
+    <div class="chat-bot-avatar">🤖</div>
+    <div>
+      <div class="ch-title">BizCommand AI</div>
+      <div class="ch-sub">● Ask about your business</div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chat-input" placeholder="Ask about your business…" onkeydown="if(event.key==='Enter')sendChat()" />
+    <button class="chat-send" onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<script>
+// ── AUTH ──
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+let currentUser = null;
+
+function authHeaders() {
+  const token = sessionStorage.getItem('bc_token');
+  const h = { 'Content-Type': 'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  return h;
+}
+
+function showAuthView(view) {
+  document.getElementById('signin-view').style.display   = view === 'signin'   ? 'block' : 'none';
+  document.getElementById('register-view').style.display = view === 'register' ? 'block' : 'none';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('register-error').textContent = '';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.textContent = 'Signing in…';
+  try {
+    const res = await fetch(`${API_BASE}/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Login failed'; return false; }
+    onAuthenticated(data.token, data.user);
+    err.textContent = '';
+  } catch {
+    err.textContent = 'Cannot reach the server. Is server.py running on :5000?';
+  }
+  return false;
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const username = document.getElementById('reg-user').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-pass').value;
+  const err = document.getElementById('register-error');
+  err.textContent = 'Creating account…';
+  try {
+    const res = await fetch(`${API_BASE}/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Registration failed'; return false; }
+    onAuthenticated(data.token, data.user);   // auto sign-in after register
+    err.textContent = '';
+  } catch {
+    err.textContent = 'Cannot reach the server. Is server.py running on :5000?';
+  }
+  return false;
+}
+
+function onAuthenticated(token, user) {
+  sessionStorage.setItem('bc_token', token);
+  sessionStorage.setItem('bc_user', JSON.stringify(user));
+  applyUser(user);
+  showDashboard();
+  refreshTaskBadge();
+}
+
+async function refreshTaskBadge() {
+  try {
+    const res = await fetch(`${API_BASE}/tasks`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const { tasks } = await res.json();
+    setBadge(tasks.filter(t => t.status !== 'done').length);
+  } catch { /* offline */ }
+}
+
+function applyUser(user) {
+  currentUser = user;
+  // Update sidebar identity
+  const initial = (user.username || '?').charAt(0).toUpperCase();
+  document.querySelectorAll('.sidebar-footer .avatar').forEach(a => a.textContent = initial);
+  document.querySelector('.sidebar-footer .user-info .name').textContent = user.username;
+  document.querySelector('.sidebar-footer .user-info .role').textContent =
+    user.role === 'owner' ? 'Owner · Admin' : 'Member';
+  // Owner-only nav
+  document.getElementById('nav-owner').style.display = user.role === 'owner' ? 'flex' : 'none';
+}
+
+function showDashboard() {
+  document.getElementById('login-overlay').classList.add('hidden');
+}
+
+async function logout() {
+  try { await fetch(`${API_BASE}/logout`, { method: 'POST', headers: authHeaders() }); } catch {}
+  sessionStorage.removeItem('bc_token');
+  sessionStorage.removeItem('bc_user');
+  currentUser = null;
+  document.getElementById('nav-owner').style.display = 'none';
+  document.getElementById('login-overlay').classList.remove('hidden');
+  showAuthView('signin');
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-user').focus();
+}
+
+// Restore session on load — verify the stored token is still valid.
+(async function restoreSession() {
+  const token = sessionStorage.getItem('bc_token');
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/me`, { headers: authHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      applyUser(data.user);
+      showDashboard();
+      refreshTaskBadge();
+    } else {
+      sessionStorage.removeItem('bc_token');
+      sessionStorage.removeItem('bc_user');
+    }
+  } catch { /* server offline — stay on login screen */ }
+})();
+
+// ── OWNER PANEL: MEMBER MANAGEMENT ──
+let _rolesLoaded = false;
+async function loadRoles() {
+  if (_rolesLoaded) return;
+  try {
+    const res = await fetch(`${API_BASE}/roles`);
+    if (!res.ok) return;
+    const { roles } = await res.json();
+    const sel = document.getElementById('am-role');
+    sel.innerHTML = roles.map(r =>
+      `<option value="${r}">${r.charAt(0).toUpperCase() + r.slice(1)}</option>`
+    ).join('');
+    sel.value = 'member';
+    _rolesLoaded = true;
+  } catch { /* keep the static fallback option */ }
+}
+
+async function loadMembers() {
+  loadRoles();
+  const tbody = document.getElementById('members-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" style="color:var(--muted);padding:20px 12px">Loading members…</td></tr>`;
+  try {
+    const res = await fetch(`${API_BASE}/members`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) {
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--accent3);padding:20px 12px">${data.error || 'Failed to load members'}</td></tr>`;
+      return;
+    }
+    renderMembers(data.members);
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--accent3);padding:20px 12px">Cannot reach the server. Is server.py running?</td></tr>`;
+  }
+}
+
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg,#6c63ff,#a78bfa)','linear-gradient(135deg,#00d4aa,#0ea5e9)',
+  'linear-gradient(135deg,#ffd93d,#f97316)','linear-gradient(135deg,#ff6b6b,#ec4899)',
+  'linear-gradient(135deg,#818cf8,#6c63ff)'
+];
+
+function renderMembers(members) {
+  const tbody = document.getElementById('members-tbody');
+  tbody.innerHTML = members.map((m, i) => {
+    const initial = (m.username || '?').charAt(0).toUpperCase();
+    const grad = AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
+    const isSelf = currentUser && m.id === currentUser.id;
+    const roleClass = 'role-' + (m.role || 'member');
+    const joined = (m.created_at || '').split(' ')[0] || '—';
+    return `<tr>
+      <td><div class="member-cell">
+        <div class="avatar" style="background:${grad}">${initial}</div>
+        <div style="font-weight:600">${escapeHtml(m.username)}${isSelf ? ' <span style="color:var(--muted);font-weight:400">(you)</span>' : ''}</div>
+      </div></td>
+      <td style="color:var(--muted)">${escapeHtml(m.email || '—')}</td>
+      <td><span class="role-tag ${roleClass}">${m.role}</span></td>
+      <td style="color:var(--muted)">${joined}</td>
+      <td style="text-align:right">
+        <button class="kick-btn" ${isSelf ? 'disabled title="You cannot remove yourself"' : ''}
+          onclick="kickMember(${m.id}, '${escapeHtml(m.username)}')">Kick</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function kickMember(id, username) {
+  if (!confirm(`Remove ${username} from the team? This deletes their account.`)) return;
+  const msg = document.getElementById('owner-msg');
+  try {
+    const res = await fetch(`${API_BASE}/members/${id}`, { method: 'DELETE', headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) { msg.className = 'panel-msg error'; msg.textContent = data.error || 'Failed to remove member'; return; }
+    msg.className = 'panel-msg ok'; msg.textContent = `${username} was removed.`;
+    loadMembers();
+  } catch {
+    msg.className = 'panel-msg error'; msg.textContent = 'Cannot reach the server.';
+  }
+}
+
+async function handleAddMember(e) {
+  e.preventDefault();
+  const msg = document.getElementById('owner-msg');
+  const body = {
+    username: document.getElementById('am-user').value.trim(),
+    email:    document.getElementById('am-email').value.trim(),
+    password: document.getElementById('am-pass').value,
+    role:     document.getElementById('am-role').value
+  };
+  msg.className = 'panel-msg'; msg.textContent = 'Adding…';
+  try {
+    const res = await fetch(`${API_BASE}/members`, {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) { msg.className = 'panel-msg error'; msg.textContent = data.error || 'Failed to add member'; return false; }
+    msg.className = 'panel-msg ok'; msg.textContent = `Added ${data.member.username}.`;
+    document.getElementById('am-user').value = '';
+    document.getElementById('am-email').value = '';
+    document.getElementById('am-pass').value = '';
+    loadMembers();
+  } catch {
+    msg.className = 'panel-msg error'; msg.textContent = 'Cannot reach the server.';
+  }
+  return false;
+}
+
+// ── PAGE SWITCHING ──
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  document.getElementById('page-title').textContent =
+    { overview:'Overview', revenue:'Revenue', customers:'Customers', invoices:'Invoices', tasks:'Tasks', team:'Team', analyzer:'Biz Analyzer', settings:'Settings', owner:'Owner Panel' }[name];
+  // init charts lazily
+  if (name === 'revenue' && !window._stackedInited) initStackedBar();
+  if (name === 'owner') loadMembers();
+  if (name === 'tasks') loadTasks();
+  if (name === 'invoices') renderInvoice();
+}
+
+// ── CHARTS ──
+Chart.defaults.color = '#7a8099';
+Chart.defaults.borderColor = '#272d3d';
+
+// Revenue line chart
+const rCtx = document.getElementById('revenueChart').getContext('2d');
+const months = ['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
+const revenueData = [14200,15800,16400,17200,18100,19500,20300,21000,22100,23400,24100,24830];
+const grad = rCtx.createLinearGradient(0,0,0,200);
+grad.addColorStop(0,'rgba(108,99,255,.35)');
+grad.addColorStop(1,'rgba(108,99,255,0)');
+new Chart(rCtx, {
+  type:'line',
+  data:{
+    labels: months,
+    datasets:[{
+      label:'MRR ($)',
+      data: revenueData,
+      borderColor:'#6c63ff',
+      backgroundColor: grad,
+      borderWidth: 2.5,
+      pointBackgroundColor:'#6c63ff',
+      pointRadius: 3,
+      tension: 0.4,
+      fill: true
+    }]
+  },
+  options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback: v=>'$'+v.toLocaleString() } } } }
+});
+
+// Donut chart
+const dCtx = document.getElementById('donutChart').getContext('2d');
+new Chart(dCtx, {
+  type:'doughnut',
+  data:{
+    labels:['Starter','Pro','Enterprise'],
+    datasets:[{
+      data:[21518,39402,71856],
+      backgroundColor:['#00d4aa','#6c63ff','#ffd93d'],
+      borderWidth:0,
+      hoverOffset:6
+    }]
+  },
+  options:{
+    plugins:{ legend:{ position:'bottom', labels:{ padding:16, font:{ size:12 } } } },
+    cutout:'70%'
+  }
+});
+
+// Stacked bar (revenue page, lazy)
+function initStackedBar() {
+  window._stackedInited = true;
+  const bCtx = document.getElementById('stackedBarChart').getContext('2d');
+  new Chart(bCtx,{
+    type:'bar',
+    data:{
+      labels: months,
+      datasets:[
+        { label:'Starter', data:[5800,6100,6400,6600,6900,7100,7400,7600,7900,8100,8300,8500], backgroundColor:'#00d4aa', stack:'s' },
+        { label:'Pro',     data:[4200,4900,5200,5600,5900,6200,6600,6900,7200,7500,7800,8100], backgroundColor:'#6c63ff', stack:'s' },
+        { label:'Enterprise', data:[4200,4800,4800,5000,5300,6200,6300,6500,7000,7800,8000,8230], backgroundColor:'#ffd93d', stack:'s' }
+      ]
+    },
+    options:{
+      plugins:{ legend:{ position:'top' } },
+      scales:{ x:{ stacked:true }, y:{ stacked:true, ticks:{ callback: v=>'$'+v.toLocaleString() } } }
+    }
+  });
+}
+
+// ── TASK LOGIC (server-backed) ──
+let _assignees = [];
+const PRIORITY_CLASS = { high: 'p-high', medium: 'p-med', low: 'p-low' };
+
+function setBadge(n) {
+  const b = document.getElementById('task-badge');
+  b.textContent = n;
+  b.style.display = n > 0 ? '' : 'none';
+}
+
+function assigneeColor(id) {
+  // stable color per assignee id
+  if (!id) return 'var(--muted)';
+  return AVATAR_GRADIENTS[id % AVATAR_GRADIENTS.length];
+}
+
+function assigneeOptions(selectedId) {
+  const sel = (id) => (String(id) === String(selectedId ?? '') ? ' selected' : '');
+  return `<option value=""${sel('')}>Unassigned</option>` +
+    _assignees.map(a => `<option value="${a.id}"${sel(a.id)}>${escapeHtml(a.username)}</option>`).join('');
+}
+
+async function loadAssignees() {
+  try {
+    const res = await fetch(`${API_BASE}/assignees`, { headers: authHeaders() });
+    if (!res.ok) return;
+    _assignees = (await res.json()).assignees || [];
+    // populate the "new task" assignee dropdown, preserving current selection
+    const sel = document.getElementById('new-task-assignee');
+    const keep = sel.value;
+    sel.innerHTML = assigneeOptions(keep);
+  } catch { /* server offline */ }
+}
+
+async function loadTasks() {
+  await loadAssignees();
+  const list = document.getElementById('task-list');
+  list.innerHTML = `<div style="color:var(--muted);padding:14px 0">Loading tasks…</div>`;
+  try {
+    const res = await fetch(`${API_BASE}/tasks`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) { list.innerHTML = `<div style="color:var(--accent3);padding:14px 0">${data.error || 'Failed to load tasks'}</div>`; return; }
+    renderTasks(data.tasks);
+  } catch {
+    list.innerHTML = `<div style="color:var(--accent3);padding:14px 0">Cannot reach the server. Is server.py running?</div>`;
+  }
+}
+
+function renderTasks(tasks) {
+  const list = document.getElementById('task-list');
+  setBadge(tasks.filter(t => t.status !== 'done').length);
+  if (!tasks.length) {
+    list.innerHTML = `<div style="color:var(--muted);padding:14px 0">No tasks yet — add one above and assign it to a teammate.</div>`;
+    return;
+  }
+  list.innerHTML = tasks.map(t => {
+    const done = t.status === 'done';
+    const pcls = PRIORITY_CLASS[t.priority] || 'p-med';
+    const plabel = done ? 'Done' : (t.priority.charAt(0).toUpperCase() + t.priority.slice(1));
+    const initial = t.assignee ? t.assignee.charAt(0).toUpperCase() : '–';
+    const avatarBg = t.assignee_id ? assigneeColor(t.assignee_id) : 'var(--surface2)';
+    return `<div class="task-item">
+      <div class="task-check ${done ? 'done' : ''}" onclick="toggleTask(${t.id}, ${done})">${done ? '✓' : ''}</div>
+      <div class="task-content">
+        <div class="task-name ${done ? 'done-text' : ''}">${escapeHtml(t.title)}</div>
+        <div class="task-meta task-assignee">
+          <span class="mini-avatar" style="background:${avatarBg}">${initial}</span>
+          <select class="task-select inline" onchange="reassignTask(${t.id}, this.value)">${assigneeOptions(t.assignee_id)}</select>
+        </div>
+      </div>
+      <span class="task-priority ${pcls}">${plabel}</span>
+      <button class="task-del" title="Delete task" onclick="deleteTask(${t.id})">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+async function createTask() {
+  const input = document.getElementById('new-task-input');
+  const title = input.value.trim();
+  if (!title) return;
+  const body = {
+    title,
+    assignee_id: document.getElementById('new-task-assignee').value || null,
+    priority: document.getElementById('new-task-priority').value
+  };
+  try {
+    const res = await fetch(`${API_BASE}/tasks`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { const d = await res.json(); alert(d.error || 'Failed to add task'); return; }
+    input.value = '';
+    loadTasks();
+  } catch { alert('Cannot reach the server.'); }
+}
+
+async function toggleTask(id, isDone) {
+  try {
+    await fetch(`${API_BASE}/tasks/${id}`, {
+      method: 'PATCH', headers: authHeaders(),
+      body: JSON.stringify({ status: isDone ? 'pending' : 'done' })
+    });
+    loadTasks();
+  } catch { alert('Cannot reach the server.'); }
+}
+
+async function reassignTask(id, assignee_id) {
+  try {
+    await fetch(`${API_BASE}/tasks/${id}`, {
+      method: 'PATCH', headers: authHeaders(),
+      body: JSON.stringify({ assignee_id: assignee_id || null })
+    });
+    loadTasks();
+  } catch { alert('Cannot reach the server.'); }
+}
+
+async function deleteTask(id) {
+  try {
+    await fetch(`${API_BASE}/tasks/${id}`, { method: 'DELETE', headers: authHeaders() });
+    loadTasks();
+  } catch { alert('Cannot reach the server.'); }
+}
+
+// ── BUSINESS ANALYZER ──
+const BIZ_DB = {
+  restaurant: {
+    label: 'Restaurant / Food Service',
+    icon: '🍽️',
+    problems: [
+      { icon:'📅', title:'No online reservation system', desc:'Customers have to call to book a table, leading to missed bookings, double-bookings, and phones ringing during busy hours.', solution:'<strong>Build:</strong> A booking web app with time-slot selection, SMS/email confirmation, and a live admin calendar view.', tags:['Web App','Database','SMS API'] },
+      { icon:'📋', title:'Paper-based or slow ordering', desc:'Handwritten orders cause errors, slow kitchen turnaround, and communication breakdowns between front and back of house.', solution:'<strong>Build:</strong> A digital QR-code menu + order submission system that sends orders directly to a kitchen display screen.', tags:['QR Menu','Real-time','Kitchen Display'] },
+      { icon:'📦', title:'Inventory tracked on paper or memory', desc:'Over-ordering and waste, or running out of key ingredients mid-service — both cost money and damage customer experience.', solution:'<strong>Build:</strong> A stock management tool with daily usage tracking, low-stock alerts, and automated reorder suggestions.', tags:['Inventory','Alerts','Dashboard'] },
+      { icon:'⭐', title:'No system for collecting reviews', desc:'Most happy customers don\'t leave reviews unless prompted. Negative experiences spread faster than positive ones online.', solution:'<strong>Build:</strong> A post-visit email/SMS flow that sends a review prompt 1 hour after the visit using customer contact info.', tags:['Email/SMS','Automation','Reputation'] },
+      { icon:'👥', title:'Staff scheduling done manually', desc:'Managers spend hours each week building rotas, swapping shifts is chaotic, and no-shows cause last-minute scrambles.', solution:'<strong>Build:</strong> A staff scheduling app where managers post shifts, staff claim/swap them, and everyone gets push notifications.', tags:['Scheduling','Push Notifications','Mobile'] },
+      { icon:'🎁', title:'No loyalty or repeat-visit program', desc:'Restaurants rely on walk-ins but have no system to bring customers back or reward frequent visits.', solution:'<strong>Build:</strong> A digital stamp-card loyalty program — customers register with a phone number and points accrue automatically per visit.', tags:['Loyalty','CRM','Points System'] },
+      { icon:'📊', title:'No data on best-selling items', desc:'Owners have a gut feeling about what sells, but no data-driven way to optimize the menu, pricing, or specials.', solution:'<strong>Build:</strong> A sales analytics dashboard pulling from the POS, showing item popularity, peak hours, and revenue per dish.', tags:['Analytics','POS Integration','Charts'] },
+      { icon:'🚗', title:'Delivery orders are disorganized', desc:'Third-party delivery apps (DoorDash, Uber Eats) create separate tablet chaos. Orders get missed or delayed.', solution:'<strong>Build:</strong> An order aggregator that pulls from all delivery platforms into one unified kitchen screen and receipt printer.', tags:['API Integration','Aggregator','Real-time'] },
+    ]
+  },
+  retail: {
+    label: 'Retail Store',
+    icon: '🛍️',
+    problems: [
+      { icon:'📦', title:'Inventory count is always off', desc:'Manual stock counts are inaccurate. Items go missing, out-of-stocks are discovered too late, and shrinkage goes unnoticed.', solution:'<strong>Build:</strong> A barcode-scan inventory system with real-time stock levels, variance reports, and reorder-point alerts.', tags:['Barcode','Inventory','Alerts'] },
+      { icon:'🏷️', title:'No system to manage pricing & discounts', desc:'Running a sale requires manually updating price tags or stickers across the whole store — slow and error-prone.', solution:'<strong>Build:</strong> A price management dashboard where you set rules (e.g. "20% off all shoes this weekend") and price tags print automatically.', tags:['Pricing Rules','Print','Dashboard'] },
+      { icon:'👤', title:'No customer purchase history', desc:'Staff have no idea if someone is a first-time buyer or a VIP — every interaction starts from zero.', solution:'<strong>Build:</strong> A lightweight CRM tied to a loyalty card or phone number that tracks purchase history and preferences.', tags:['CRM','Loyalty','Purchase History'] },
+      { icon:'📊', title:'Bestsellers unknown until month-end', desc:'You only find out what sold well when you do the monthly books — too late to restock or double down on winners.', solution:'<strong>Build:</strong> A live sales dashboard showing top products by day/week, slow movers, and category performance in real time.', tags:['Analytics','Real-time','POS'] },
+      { icon:'🔔', title:'Staff have no task management system', desc:'Opening/closing duties, restocking reminders, and daily tasks are communicated verbally or via sticky notes.', solution:'<strong>Build:</strong> A daily task checklist app where managers assign tasks per shift and staff mark them complete on a shared screen.', tags:['Task Management','Mobile','Notifications'] },
+      { icon:'💳', title:'Returns & exchanges are slow', desc:'Processing a return requires finding paper receipts, manually adjusting inventory, and issuing store credit by hand.', solution:'<strong>Build:</strong> A returns portal — scan item barcode, auto-verify purchase, update stock, and issue digital store credit instantly.', tags:['Barcode','Returns','Automation'] },
+    ]
+  },
+  salon: {
+    label: 'Hair Salon / Barbershop',
+    icon: '✂️',
+    problems: [
+      { icon:'📅', title:'Phone-only bookings create no-shows', desc:'Clients book over the phone and forget. No-shows cost stylists hours of lost income with no warning.', solution:'<strong>Build:</strong> An online booking system with automated SMS/email reminders 24h and 1h before the appointment.', tags:['Booking','SMS Reminders','Calendar'] },
+      { icon:'💈', title:'No client history or preference notes', desc:'Each visit starts fresh — stylists have to ask the same questions every time, which feels unprofessional.', solution:'<strong>Build:</strong> A client profile system storing hair type, preferred stylist, last service, and notes — pulled up at check-in automatically.', tags:['CRM','Client Profiles','Check-in'] },
+      { icon:'⭐', title:'No review generation process', desc:'Satisfied clients rarely leave Google reviews unless asked at exactly the right moment.', solution:'<strong>Build:</strong> An auto-triggered SMS 30 minutes after checkout asking for a Google review with a direct link.', tags:['SMS Automation','Reviews','Reputation'] },
+      { icon:'💰', title:'Pricing is inconsistent or unenforced', desc:'Different staff charge different amounts for the same service, leading to confusion and disputes at checkout.', solution:'<strong>Build:</strong> A digital service menu with locked pricing that staff select at checkout — no manual price entry.', tags:['Pricing','POS','Service Menu'] },
+      { icon:'📊', title:'No visibility into stylist performance', desc:'The owner doesn\'t know which stylist is most booked, who has the highest rebooking rate, or who\'s underperforming.', solution:'<strong>Build:</strong> A stylist performance dashboard showing bookings, revenue, rebook rate, and tips per staff member.', tags:['Analytics','Staff','Dashboard'] },
+      { icon:'🎁', title:'No loyalty program', desc:'Clients go to whoever is cheapest or most convenient — there\'s no incentive to keep coming back specifically to you.', solution:'<strong>Build:</strong> A punch-card style loyalty app: every 10th visit is free or discounted, tracked digitally by phone number.', tags:['Loyalty','Retention','Mobile'] },
+    ]
+  },
+  gym: {
+    label: 'Gym / Fitness Studio',
+    icon: '🏋️',
+    problems: [
+      { icon:'📋', title:'Member sign-in is manual or badge-only', desc:'No real tracking of who is actually coming in, when, and how often — so you can\'t spot members going cold.', solution:'<strong>Build:</strong> A digital check-in kiosk with QR code per member. Attendance data feeds into a churn-risk alert if someone hasn\'t visited in 14+ days.', tags:['Check-in','QR Code','Churn Alerts'] },
+      { icon:'📅', title:'Class bookings are full of no-shows', desc:'Popular classes fill up, but 20–30% of booked spots are empty on the day. Others get turned away unfairly.', solution:'<strong>Build:</strong> A class booking system with a waitlist, automated cancellation window (e.g. 2h before), and auto-promote from waitlist.', tags:['Booking','Waitlist','Automation'] },
+      { icon:'💳', title:'Membership billing is manual', desc:'Chasing members for monthly dues via Venmo or cash is time-consuming and awkward. Payments slip through the cracks.', solution:'<strong>Build:</strong> Automated recurring billing via Stripe with member self-service portal to update card details.', tags:['Billing','Stripe','Recurring Payments'] },
+      { icon:'📊', title:'No data on peak hours', desc:'The gym is overcrowded at 6pm and empty at 11am, but there\'s no data to guide promotions or off-peak incentives.', solution:'<strong>Build:</strong> A capacity heatmap from check-in data, showing peak hours by day of week — feed it into marketing campaigns.', tags:['Analytics','Heatmap','Marketing'] },
+      { icon:'🥗', title:'No progress tracking for members', desc:'Members have no easy way to log workouts or track progress, reducing their sense of improvement and stickiness.', solution:'<strong>Build:</strong> A simple member app for logging lifts, cardio, and body measurements — with progress charts over time.', tags:['Member App','Progress Tracking','Charts'] },
+      { icon:'🎯', title:'Lead follow-up is inconsistent', desc:'People enquire about membership and never hear back, or get a call once but no follow-up if they don\'t convert.', solution:'<strong>Build:</strong> A lead CRM with auto-email sequences — enquiry → trial offer → follow-up → last-chance discount over 7 days.', tags:['CRM','Email Sequences','Lead Nurture'] },
+    ]
+  },
+  realestate: {
+    label: 'Real Estate Agency',
+    icon: '🏠',
+    problems: [
+      { icon:'🏘️', title:'Property listings live in spreadsheets', desc:'Agents maintain their own messy lists. There\'s no central source of truth for what\'s available, under offer, or sold.', solution:'<strong>Build:</strong> An internal property database with status tracking (Available / Under Offer / Sold), filterable by type, price, and area.', tags:['Database','Status Tracking','Search'] },
+      { icon:'📅', title:'Viewing scheduling is chaotic', desc:'Coordinating viewings between agents, buyers, and sellers happens over WhatsApp and phone — easy to double-book.', solution:'<strong>Build:</strong> A viewing scheduler where buyers pick available slots online, and both agent and seller get calendar invites automatically.', tags:['Scheduling','Calendar','Automation'] },
+      { icon:'👤', title:'No follow-up system for leads', desc:'Potential buyers enquire on Rightmove or Zillow then disappear. There\'s no structured system to re-engage them.', solution:'<strong>Build:</strong> A lead CRM that captures all enquiry sources, scores leads by activity, and sends agents daily follow-up task lists.', tags:['CRM','Lead Scoring','Task Automation'] },
+      { icon:'📄', title:'Document collection is slow', desc:'Getting ID, proof of funds, and mortgage approval from buyers is all done by email and chased manually.', solution:'<strong>Build:</strong> A client portal where buyers upload required documents, with a checklist and auto-reminders for missing items.', tags:['Client Portal','Document Upload','Reminders'] },
+      { icon:'📊', title:'No performance dashboard for agents', desc:'The manager has no live view of pipeline, conversion rates, or which agents are closing vs. stalling.', solution:'<strong>Build:</strong> An agent performance dashboard: listings taken, viewings booked, offers received, average time-to-sale, and commission earned.', tags:['Analytics','Pipeline','Dashboard'] },
+      { icon:'🔔', title:'Price drop or new listing alerts not automated', desc:'Buyers who registered interest months ago are never notified when a matching new property comes on or drops in price.', solution:'<strong>Build:</strong> A property alert engine — buyers set criteria (area, bedrooms, price range) and get instant email/SMS when matches appear.', tags:['Alerts','Email/SMS','Matching Engine'] },
+    ]
+  },
+  ecommerce: {
+    label: 'E-Commerce Store',
+    icon: '🛒',
+    problems: [
+      { icon:'🛒', title:'High cart abandonment rate', desc:'60–80% of customers add items to cart then leave. There\'s no system to bring them back.', solution:'<strong>Build:</strong> An abandoned cart recovery flow — email 1h after abandonment, then 24h, then a discount offer at 48h.', tags:['Email Automation','Cart Recovery','Conversion'] },
+      { icon:'📦', title:'Order tracking is manual or non-existent', desc:'Customers email "where is my order?" constantly because there\'s no self-service tracking available.', solution:'<strong>Build:</strong> An order tracking page linked from the confirmation email — pulls carrier data and shows a live status timeline.', tags:['Order Tracking','Carrier API','Self-Service'] },
+      { icon:'🔁', title:'Returns process is painful', desc:'Customers have to email in, wait for a response, print a label, and guess when their refund will arrive.', solution:'<strong>Build:</strong> A self-service returns portal: enter order number, select reason, get instant prepaid label, automatic refund triggered on receipt.', tags:['Returns Portal','Automation','Stripe Refunds'] },
+      { icon:'📊', title:'No product performance data', desc:'You don\'t know which products have the best margin, which are returned most, or which drive repeat purchases.', solution:'<strong>Build:</strong> A product analytics dashboard: revenue per SKU, return rate, margin, repeat-buy rate, and lifetime customer value.', tags:['Analytics','SKU','LTV'] },
+      { icon:'⭐', title:'No review collection system', desc:'Products have zero reviews because there\'s no automated prompt sent after delivery.', solution:'<strong>Build:</strong> A post-delivery email (7 days after shipment) asking for a product review with a one-click star rating.', tags:['Reviews','Email Automation','Social Proof'] },
+      { icon:'🎯', title:'No personalized recommendations', desc:'Every customer sees the same homepage. Returning visitors aren\'t shown products relevant to their history.', solution:'<strong>Build:</strong> A simple recommendation engine using purchase history — "customers who bought X also bought Y" widget on product pages.', tags:['Recommendation Engine','Personalization','ML'] },
+      { icon:'💬', title:'No live support or chatbot', desc:'Customers with pre-purchase questions leave the site because there\'s no instant way to get answers.', solution:'<strong>Build:</strong> A rule-based chatbot that answers the top 20 FAQs (sizing, shipping, returns) instantly, escalating to a human if needed.', tags:['Chatbot','FAQ Automation','Live Chat'] },
+    ]
+  },
+  lawfirm: {
+    label: 'Law Firm',
+    icon: '⚖️',
+    problems: [
+      { icon:'📋', title:'Client intake is paper-based', desc:'New clients fill out paper forms, which are then typed up manually — wasting hours and creating data entry errors.', solution:'<strong>Build:</strong> A digital intake form that auto-populates a client record in the case management system upon submission.', tags:['Digital Forms','CRM','Automation'] },
+      { icon:'⏱️', title:'Time tracking is inaccurate or forgotten', desc:'Billable hours are often under-recorded because lawyers log time from memory at the end of the day.', solution:'<strong>Build:</strong> A one-click time tracker with matter codes — start/stop timer, auto-logs to the client file, exports to billing at month end.', tags:['Time Tracking','Billing','Chrome Extension'] },
+      { icon:'📅', title:'Deadline management is reactive', desc:'Court dates, filing deadlines, and limitation periods are tracked in personal calendars — a missed deadline is catastrophic.', solution:'<strong>Build:</strong> A matter deadline engine that calculates key dates (e.g. 30 days from issue date) and sends escalating reminders to the whole team.', tags:['Deadlines','Calendar','Escalating Alerts'] },
+      { icon:'📄', title:'Document templates re-created every time', desc:'Standard documents like NDAs, engagement letters, and contracts are drafted from scratch or copy-pasted from old files.', solution:'<strong>Build:</strong> A document automation tool — select template, fill key fields, and generate a fully formatted Word doc in seconds.', tags:['Document Automation','Templates','Word API'] },
+      { icon:'💰', title:'Invoicing is slow and chased manually', desc:'Bills go out late, clients ignore them, and chasing payment is handled by email — an uncomfortable and inefficient process.', solution:'<strong>Build:</strong> An auto-invoicing system that generates bills from logged time entries and sends payment reminders at 7, 14, and 30 days overdue.', tags:['Invoicing','Payment Reminders','Stripe'] },
+      { icon:'🔒', title:'Client communication not secure or organized', desc:'Sensitive case documents are shared over unencrypted email and live in everyone\'s inboxes rather than a central secure location.', solution:'<strong>Build:</strong> A secure client portal for document sharing with read receipts, version control, and end-to-end encryption.', tags:['Secure Portal','Document Sharing','Encryption'] },
+    ]
+  },
+  clinic: {
+    label: 'Medical Clinic / Healthcare',
+    icon: '🏥',
+    problems: [
+      { icon:'📅', title:'Appointment booking requires a phone call', desc:'Patients can only book by calling during office hours — leading to hold times, missed calls, and administrative overload.', solution:'<strong>Build:</strong> An online appointment booking system by service type and doctor, with automatic insurance verification prompts.', tags:['Online Booking','Calendar','Insurance'] },
+      { icon:'🔔', title:'High appointment no-show rate', desc:'No-shows waste clinician time and cost revenue — most are caused by patients simply forgetting.', solution:'<strong>Build:</strong> Automated SMS/email reminders at 48h and 2h before appointment, with a one-click confirm/cancel link.', tags:['SMS Reminders','Automation','No-shows'] },
+      { icon:'📋', title:'Paper intake forms & manual data entry', desc:'Patients fill out clipboards in the waiting room. Staff then type the same data into the EHR — double work.', solution:'<strong>Build:</strong> A pre-visit digital intake form (sent by SMS link) that auto-populates the patient record.', tags:['Digital Forms','EHR Integration','Automation'] },
+      { icon:'💊', title:'Prescription refill requests are manual', desc:'Patients call in for refills, staff pass messages to doctors, and callbacks create a time-consuming chain.', solution:'<strong>Build:</strong> A patient portal where refill requests are submitted online, auto-routed to the prescribing doctor for one-click approval.', tags:['Patient Portal','Workflow','Routing'] },
+      { icon:'💰', title:'Billing errors and slow collections', desc:'Medical billing mistakes lead to claim denials, delayed payments, and patients receiving unexpected bills months later.', solution:'<strong>Build:</strong> A billing dashboard with claim status tracking, denial reason codes, and automated patient balance statements.', tags:['Medical Billing','Claims','Dashboard'] },
+      { icon:'📊', title:'No visibility into clinic performance', desc:'Management doesn\'t know average wait times, no-show rates by provider, or revenue per appointment type in real time.', solution:'<strong>Build:</strong> A clinic analytics dashboard with KPIs: appointment fill rate, no-show %, average visit duration, and revenue per provider.', tags:['Analytics','KPIs','Reporting'] },
+    ]
+  },
+  construction: {
+    label: 'Construction / Contracting',
+    icon: '🏗️',
+    problems: [
+      { icon:'📋', title:'Job quotes are slow and inconsistent', desc:'Every quote is built from scratch in a spreadsheet or Word doc, taking hours and varying wildly by who prepares it.', solution:'<strong>Build:</strong> A quote builder app: select job type, enter dimensions/quantities, and generate a professional PDF quote in minutes.', tags:['Quote Builder','PDF Generation','Templates'] },
+      { icon:'📅', title:'Project scheduling conflicts', desc:'Multiple crews, jobs, and suppliers are tracked in different places — leading to double-booking, idle crews, and delays.', solution:'<strong>Build:</strong> A project scheduling tool with a Gantt-style view, crew assignments, and conflict detection when jobs overlap.', tags:['Gantt Chart','Scheduling','Conflict Detection'] },
+      { icon:'📸', title:'No site documentation system', desc:'Photos are taken on personal phones and live in WhatsApp groups — hard to find later for disputes, inspections, or client reports.', solution:'<strong>Build:</strong> A job photo logger — crews upload timestamped, GPS-tagged photos per job site, organized by date and work stage.', tags:['Photo Logging','GPS','Mobile App'] },
+      { icon:'💰', title:'Invoice chasing is a full-time job', desc:'Clients delay payment because invoices are unclear, sent late, or there\'s no formal follow-up process.', solution:'<strong>Build:</strong> Auto-invoicing tied to project milestones with payment tracking, overdue reminders, and a client-facing payment link.', tags:['Invoicing','Milestones','Payment Link'] },
+      { icon:'🧱', title:'Material orders tracked in a notebook', desc:'Ordering too much wastes money; too little halts the job. There\'s no system linking material needs to job schedules.', solution:'<strong>Build:</strong> A materials management tool: input job specs, get a calculated shopping list, track orders and delivery dates per site.', tags:['Materials Planning','Inventory','Supplier Tracking'] },
+      { icon:'🔐', title:'Subcontractor compliance is manual', desc:'Ensuring every sub has valid insurance, certs, and licenses is tracked on paper or forgotten — a liability risk.', solution:'<strong>Build:</strong> A sub compliance portal where subs upload docs, you see expiry dates, and get alerts 30 days before anything expires.', tags:['Compliance','Document Expiry','Alerts'] },
+    ]
+  },
+  agency: {
+    label: 'Marketing / Creative Agency',
+    icon: '📣',
+    problems: [
+      { icon:'📋', title:'Project scope creep with no tracking', desc:'Clients add requests "just quickly" and the team delivers — but the extra work is never billed and eats into margins.', solution:'<strong>Build:</strong> A scope tracker that ties client requests to approved deliverables. Anything outside scope generates a change-order request automatically.', tags:['Scope Management','Change Orders','Billing'] },
+      { icon:'⏱️', title:'Time tracking is an afterthought', desc:'Creative teams hate logging hours. By end of month, logged hours are guesses — and you\'re losing billable revenue.', solution:'<strong>Build:</strong> A Pomodoro-style time tracker integrated into the task board — hours log automatically as work happens.', tags:['Time Tracking','Task Board','Automatic Logging'] },
+      { icon:'📊', title:'Client reporting takes hours to prepare', desc:'Pulling together monthly performance reports from GA, Meta Ads, and Google Ads is a manual copy-paste nightmare.', solution:'<strong>Build:</strong> An automated client report generator that pulls from ad platform APIs and GA4, and renders a branded PDF monthly.', tags:['Report Automation','GA4 API','Ads API','PDF'] },
+      { icon:'💬', title:'Client feedback is scattered', desc:'Feedback comes in via email, WhatsApp, Slack, and calls — gets lost, actioned twice, or missed entirely.', solution:'<strong>Build:</strong> A client feedback portal where all revision requests are submitted, tracked, and linked to deliverable versions.', tags:['Feedback Portal','Version Control','Centralized'] },
+      { icon:'💰', title:'Invoicing lags behind delivery', desc:'Projects finish but invoices go out weeks later because no one is tracking milestone completion vs. billing status.', solution:'<strong>Build:</strong> Milestone-based invoicing: when a deliverable is marked complete, an invoice draft is auto-generated and queued for approval.', tags:['Invoicing','Milestones','Automation'] },
+      { icon:'🎯', title:'No lead source attribution', desc:'You\'re spending on LinkedIn, referrals, and cold email — but have no idea which channel is actually bringing in clients.', solution:'<strong>Build:</strong> A lightweight CRM with UTM tracking and a "how did you hear about us?" field at enquiry — showing ROI per acquisition channel.', tags:['CRM','UTM Tracking','Attribution'] },
+    ]
+  },
+  school: {
+    label: 'School / Tutoring / Education',
+    icon: '📚',
+    problems: [
+      { icon:'📅', title:'Session scheduling via back-and-forth messages', desc:'Booking a tutoring session requires multiple messages to agree on a time — frustrating for both students and tutors.', solution:'<strong>Build:</strong> A self-booking platform where students see tutor availability and book a slot instantly with automatic calendar invites.', tags:['Booking','Calendar Sync','Automation'] },
+      { icon:'📊', title:'No student progress tracking', desc:'There\'s no easy way for parents or students to see improvement over time — it all lives in a tutor\'s head or notebook.', solution:'<strong>Build:</strong> A progress dashboard tracking scores, topics covered, and improvement trends — viewable by students and parents.', tags:['Progress Tracking','Dashboard','Parent Portal'] },
+      { icon:'💰', title:'Payment collection is inconsistent', desc:'Invoicing tutors or classes manually leads to late payments, forgotten sessions, and awkward conversations.', solution:'<strong>Build:</strong> Automated billing per session or subscription — Stripe charges on session completion and sends the receipt automatically.', tags:['Billing','Stripe','Recurring'] },
+      { icon:'📋', title:'Homework & assignment tracking is chaotic', desc:'Assignments are set verbally or via email — students lose track, parents can\'t check, and completion rates suffer.', solution:'<strong>Build:</strong> An assignment tracker where tutors post tasks, students mark them complete, and parents get a weekly digest email.', tags:['Assignment Tracker','Parent Digest','Email'] },
+      { icon:'🎥', title:'No recording or replay of sessions', desc:'Students who miss a session or need to review a concept have no way to re-watch what was covered.', solution:'<strong>Build:</strong> A session vault that auto-saves video recordings (from Zoom/Meet) and organizes them by student and topic.', tags:['Recording','Video Archive','Zoom API'] },
+      { icon:'⭐', title:'No feedback loop between students and tutors', desc:'There\'s no structured way for students to rate sessions or flag what they\'re struggling with between sessions.', solution:'<strong>Build:</strong> A post-session micro-survey (3 questions max) sent via SMS — results feed into the tutor\'s performance dashboard.', tags:['Feedback','SMS Survey','Performance'] },
+    ]
+  },
+  hotel: {
+    label: 'Hotel / Hospitality',
+    icon: '🏨',
+    problems: [
+      { icon:'💻', title:'Bookings managed across too many platforms', desc:'OTAs like Booking.com, Expedia, and Airbnb each have separate calendars — double-bookings are a constant risk.', solution:'<strong>Build:</strong> A channel manager that syncs availability across all OTAs in real time via their APIs, with a single master calendar.', tags:['Channel Manager','OTA APIs','Calendar Sync'] },
+      { icon:'🛎️', title:'Guest requests handled by phone or paper', desc:'Guests call the front desk for housekeeping, extra towels, or restaurant reservations — creating a log of missed requests.', solution:'<strong>Build:</strong> A guest mobile app where requests are submitted, routed to the right department, and tracked to completion.', tags:['Guest App','Request Tracking','Mobile'] },
+      { icon:'📊', title:'Pricing never changes based on demand', desc:'The room rate is the same regardless of occupancy, local events, or competitor pricing — leaving revenue on the table.', solution:'<strong>Build:</strong> A dynamic pricing engine that adjusts rates based on occupancy thresholds, date proximity, and local event scraping.', tags:['Dynamic Pricing','Revenue Management','Web Scraping'] },
+      { icon:'⭐', title:'No automated review follow-up', desc:'Guests check out and nothing happens. Reviews are left to chance, and negative experiences go unaddressed.', solution:'<strong>Build:</strong> A post-checkout email flow: satisfaction check 1h after checkout, then a TripAdvisor/Google review request at 24h.', tags:['Review Automation','Email Flow','Reputation'] },
+      { icon:'📋', title:'Housekeeping room status is verbal', desc:'Housekeeping communicates clean/dirty room status by radio or paper — front desk doesn\'t know what\'s ready for check-in.', solution:'<strong>Build:</strong> A housekeeping app where staff update room status (Dirty / Cleaning / Clean / Inspected) and front desk sees it live.', tags:['Mobile App','Real-time Status','Housekeeping'] },
+      { icon:'💰', title:'Upsells happen by luck not system', desc:'Upgrades, spa packages, and dining reservations are offered only if a receptionist remembers to mention them at check-in.', solution:'<strong>Build:</strong> A pre-arrival upsell email (3 days before check-in) with personalized upgrade offers based on room type and booking history.', tags:['Upsell Automation','Email','Revenue'] },
+    ]
+  },
+  cleaning: {
+    label: 'Cleaning Service',
+    icon: '🧹',
+    problems: [
+      { icon:'📅', title:'Booking and scheduling is done by phone/text', desc:'Clients text to request a clean, and the owner manually tries to fit them in — a chaotic process that doesn\'t scale.', solution:'<strong>Build:</strong> A booking portal where clients pick their service type, frequency, and preferred day — auto-assigned to the nearest available crew.', tags:['Booking','Routing','Automation'] },
+      { icon:'🗺️', title:'Crew routing wastes time and fuel', desc:'Cleaners drive to jobs in a random order, wasting hours in transit that eat into the day\'s profitability.', solution:'<strong>Build:</strong> A route optimizer that sequences the day\'s jobs by proximity, minimizing total drive time across the crew.', tags:['Route Optimization','Maps API','Efficiency'] },
+      { icon:'📸', title:'No before/after job documentation', desc:'When a client disputes a cleaning quality or claims damage, there\'s no photographic record to protect the business.', solution:'<strong>Build:</strong> A job app where cleaners take before and after photos per job, auto-attached to that booking\'s record with timestamp.', tags:['Photo Logging','Mobile App','Dispute Protection'] },
+      { icon:'💰', title:'Recurring billing is manual', desc:'Monthly clients require individual invoices sent by hand — time-consuming and prone to errors or missed charges.', solution:'<strong>Build:</strong> Auto-recurring billing via Stripe — charge clients on the same date each month with emailed receipts.', tags:['Recurring Billing','Stripe','Automation'] },
+      { icon:'⭐', title:'No review collection process', desc:'Satisfied clients don\'t leave reviews unless prompted, so the business looks smaller online than it really is.', solution:'<strong>Build:</strong> An auto-SMS 2 hours after job completion: "Happy with your clean today? Leave us a Google review 👉 [link]"', tags:['SMS Automation','Google Reviews','Reputation'] },
+      { icon:'🔔', title:'Clients aren\'t notified of their cleaner\'s ETA', desc:'Clients stay home all morning waiting because they don\'t know when the crew will actually arrive.', solution:'<strong>Build:</strong> An automated SMS sent when the crew is 30 minutes away, triggered by GPS location crossing a geofence.', tags:['SMS','Geofencing','GPS','ETA'] },
+    ]
+  },
+  accounting: {
+    label: 'Accounting / Bookkeeping Firm',
+    icon: '🧾',
+    problems: [
+      { icon:'📥', title:'Document collection from clients is slow', desc:'Chasing clients for receipts, bank statements, and payroll data takes up huge amounts of staff time each month.', solution:'<strong>Build:</strong> A client document portal with a clear checklist per client — they upload files, you get notified, and nothing gets missed.', tags:['Client Portal','Document Checklist','Notifications'] },
+      { icon:'⏰', title:'Month-end is always a last-minute crunch', desc:'Clients submit everything at the deadline, creating a massive bottleneck that causes errors and overtime.', solution:'<strong>Build:</strong> Automated reminders starting 2 weeks before month-end, escalating daily as the deadline approaches.', tags:['Reminder Automation','Escalating Alerts','Deadline Management'] },
+      { icon:'📊', title:'Clients have no visibility into their finances', desc:'Most clients only hear from their accountant at tax time — they have no running picture of where their business stands.', solution:'<strong>Build:</strong> A client financial dashboard showing P&L, cash flow trend, and upcoming tax liabilities — updated monthly from your data.', tags:['Client Dashboard','Financial Reporting','Data Viz'] },
+      { icon:'🔁', title:'Recurring tasks have no automated tracking', desc:'Monthly payroll, quarterly VAT, and annual returns are tracked in spreadsheets or personal memory — things slip through.', solution:'<strong>Build:</strong> A compliance calendar engine: define recurring task types, auto-generate tasks per client on the right dates, assign to staff.', tags:['Compliance Calendar','Task Automation','Staff Assignment'] },
+      { icon:'💬', title:'Client queries answered via untracked email', desc:'Questions come in by email to different staff inboxes, get lost, and the same question is sometimes answered twice or not at all.', solution:'<strong>Build:</strong> A shared client query inbox where all messages are logged, assigned to a staff member, and tracked to resolution.', tags:['Shared Inbox','Ticket Tracking','CRM'] },
+      { icon:'💰', title:'Billing for extra work not captured', desc:'Ad hoc queries, urgent calls, and extra filings happen but aren\'t billed because there\'s no process to capture them.', solution:'<strong>Build:</strong> A quick-log tool where staff record out-of-scope time in 30 seconds — auto-added to the next client invoice.', tags:['Time Logging','Ad-hoc Billing','Invoice'] },
+    ]
+  },
+};
+
+// Build quick-pick chips
+const chips = ['Restaurant','Gym','Retail','Salon','Real Estate','E-Commerce','Law Firm','Clinic','Construction','Agency','School','Hotel','Cleaning','Accounting'];
+const chipsEl = document.getElementById('biz-chips');
+chips.forEach(c => {
+  const el = document.createElement('div');
+  el.className = 'chip';
+  el.textContent = c;
+  el.onclick = () => { document.getElementById('biz-input').value = c; runAnalysis(); };
+  chipsEl.appendChild(el);
+});
+
+function matchBusiness(query) {
+  const q = query.toLowerCase().trim();
+  const keyMap = {
+    restaurant:'restaurant', food:'restaurant', cafe:'restaurant', coffee:'restaurant', bar:'restaurant', diner:'restaurant', pizz:'restaurant',
+    retail:'retail', shop:'retail', store:'retail', boutique:'retail',
+    salon:'salon', barber:'salon', hair:'salon', beauty:'salon', spa:'salon', nail:'salon',
+    gym:'gym', fitness:'gym', yoga:'gym', pilates:'gym', crossfit:'gym', studio:'gym',
+    'real estate':'realestate', realtor:'realestate', property:'realestate', estate:'realestate', letting:'realestate',
+    ecommerce:'ecommerce', 'e-commerce':'ecommerce', 'online store':'ecommerce', shopify:'ecommerce', amazon:'ecommerce', dropship:'ecommerce',
+    law:'lawfirm', legal:'lawfirm', solicitor:'lawfirm', attorney:'lawfirm', firm:'lawfirm',
+    clinic:'clinic', medical:'clinic', doctor:'clinic', dental:'clinic', dentist:'clinic', health:'clinic', physio:'clinic', therapy:'clinic',
+    construction:'construction', contractor:'construction', builder:'construction', plumb:'construction', electric:'construction', roofing:'construction',
+    agency:'agency', marketing:'agency', design:'agency', creative:'agency', advertising:'agency', branding:'agency', seo:'agency',
+    school:'school', tutor:'school', education:'school', teach:'school', cours:'school', training:'school', coach:'school',
+    hotel:'hotel', hospit:'hotel', bnb:'hotel', airbnb:'hotel', motel:'hotel', resort:'hotel',
+    clean:'cleaning', maid:'cleaning', janitorial:'cleaning', housekeep:'cleaning',
+    account:'accounting', bookkeep:'accounting', tax:'accounting', cpa:'accounting', finance:'accounting', payroll:'accounting',
+  };
+  for (const [keyword, key] of Object.entries(keyMap)) {
+    if (q.includes(keyword)) return key;
+  }
+  return null;
+}
+
+const AI_SERVER = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+let serverOnline = null; // null=unknown, true=online, false=offline
+
+async function checkServer() {
+  try {
+    const r = await fetch(`${AI_SERVER}/health`, { signal: AbortSignal.timeout(1500) });
+    const j = await r.json();
+    serverOnline = j.status === 'ok';
+    return serverOnline;
+  } catch {
+    serverOnline = false;
+    return false;
+  }
+}
+
+async function runAnalysis() {
+  const query = document.getElementById('biz-input').value.trim();
+  if (!query) return;
+  const resultsEl = document.getElementById('analyzer-results');
+
+  resultsEl.innerHTML = `<div style="text-align:center;padding:30px 0">
+    <div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+    <div style="color:var(--muted);font-size:13px;margin-top:8px">Analyzing <strong style="color:var(--text)">${query}</strong> with AI…</div>
+  </div>`;
+
+  // Try AI server first
+  const online = serverOnline === null ? await checkServer() : serverOnline;
+
+  if (online) {
+    try {
+      const res = await fetch(`${AI_SERVER}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business: query }),
+        signal: AbortSignal.timeout(20000)
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        resultsEl.innerHTML = `<div class="no-match">
+          <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px">Server error</div>
+          <div style="color:var(--muted)">${data.error}</div>
+        </div>`;
+        return;
+      }
+
+      renderProblems(query, data.problems, true);
+      return;
+    } catch (e) {
+      serverOnline = false;
+    }
+  }
+
+  // Fallback: use built-in database
+  const key = matchBusiness(query);
+  if (!key) {
+    resultsEl.innerHTML = `<div class="no-match">
+      <div style="font-size:40px;margin-bottom:12px">🤔</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px">No match found for "${query}"</div>
+      <div style="color:var(--muted);margin-bottom:16px">The AI server isn't running, so I'm using the built-in database — which doesn't cover this business type yet.</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:left;font-size:13px;max-width:480px;margin:0 auto">
+        <div style="font-weight:700;margin-bottom:8px">To enable AI for any business:</div>
+        <div style="color:var(--muted);line-height:1.8">
+          1. Get a free key at <a href="https://console.anthropic.com" style="color:var(--accent)">console.anthropic.com</a><br>
+          2. Open <code style="background:var(--border);padding:1px 5px;border-radius:3px">server.py</code> → paste your key<br>
+          3. Run <code style="background:var(--border);padding:1px 5px;border-radius:3px">pip install flask flask-cors anthropic</code><br>
+          4. Run <code style="background:var(--border);padding:1px 5px;border-radius:3px">python server.py</code>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const biz = BIZ_DB[key];
+  renderProblems(biz.label, biz.problems, false, biz.icon);
+}
+
+function renderProblems(label, problems, fromAI, icon = '🧠') {
+  const resultsEl = document.getElementById('analyzer-results');
+  const source = fromAI
+    ? `<span style="background:rgba(108,99,255,.15);color:var(--accent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:10px">✨ AI Generated</span>`
+    : `<span style="background:rgba(0,212,170,.12);color:var(--accent2);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:10px">Built-in</span>`;
+
+  _currentProblems = problems;
+  const cards = problems.map((p, i) => `
+    <div class="problem-card" style="animation-delay:${i*0.07}s">
+      <div class="prob-header">
+        <div class="prob-icon">${p.icon}</div>
+        <div class="prob-title">${p.title}</div>
+      </div>
+      <div class="prob-desc">${p.desc}</div>
+      <div class="prob-solution">${p.solution}</div>
+      <div class="prob-tags">${(p.tags||[]).map(t=>`<span class="prob-tag">${t}</span>`).join('')}</div>
+      <button class="build-btn" onclick="copyBuildPrompt(${i}, this)">🛠 Build This →</button>
+    </div>`).join('');
+
+  resultsEl.innerHTML = `
+    <div style="display:flex;align-items:center;margin-bottom:6px">
+      <div class="analyzer-business-title">${icon} ${label}</div>${source}
+    </div>
+    <div class="analyzer-subtitle">${problems.length} problems found — each solvable with code</div>
+    <div class="problems-grid">${cards}</div>
+  `;
+}
+
+// ── CUSTOMER SEARCH ──
+function filterCustomers(q) {
+  const rows = document.querySelectorAll('#customer-tbody tr');
+  rows.forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ── "BUILD THIS" — copy a dev prompt for a problem card ──
+let _currentProblems = [];
+async function copyBuildPrompt(i, btn) {
+  const p = _currentProblems[i];
+  if (!p) return;
+  // strip any HTML (e.g. "<strong>Build:</strong>") from the solution text
+  const solution = String(p.solution || '').replace(/<[^>]+>/g, '').trim();
+  const tags = (p.tags || []).join(', ');
+  const prompt =
+`Build a software solution for the following business problem.
+
+PROBLEM: ${p.title}
+CONTEXT: ${p.desc}
+SOLUTION TO BUILD: ${solution}
+SUGGESTED TECH/TAGS: ${tags}
+
+Please:
+1. Propose a concrete architecture and the specific components to build.
+2. Recommend a tech stack (frontend, backend, database, third-party APIs) based on the tags above.
+3. Outline the data model and the key API endpoints.
+4. Provide starter code for the core feature.
+5. List the steps to ship an MVP.`;
+
+  try {
+    await navigator.clipboard.writeText(prompt);
+  } catch {
+    // fallback for non-secure contexts (file://)
+    const ta = document.createElement('textarea');
+    ta.value = prompt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+  }
+  const original = btn.innerHTML;
+  btn.classList.add('copied');
+  btn.innerHTML = '✓ Copied!';
+  setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = original; }, 1600);
+}
+
+// ── EXPORT TO CSV (visible rows only) ──
+function exportTableToCSV(tableId, filename) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const rows = [];
+  // header
+  rows.push([...table.querySelectorAll('thead th')].map(th => csvCell(th.textContent)));
+  // body — skip rows hidden by search/filter
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    if (tr.offsetParent === null && tr.style.display === 'none') return;
+    rows.push([...tr.querySelectorAll('td')].map(td => csvCell(td.textContent)));
+  });
+  const csv = rows.map(r => r.join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function csvCell(text) {
+  const t = (text || '').trim().replace(/\s+/g, ' ');
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+}
+
+// ── ANOMALY ALERTS (Overview) ──
+// Mock current-vs-previous KPI data to demonstrate the >15% threshold.
+const ANOMALY_KPIS = [
+  { label: 'Failed Payments',     current: 8.2,  previous: 5.1,  goodWhenUp: false, unit: '%' },
+  { label: 'Enterprise Signups',  current: 31,   previous: 24,   goodWhenUp: true,  unit: '' },
+  { label: 'Support Backlog',     current: 17,   previous: 11,   goodWhenUp: false, unit: '' },
+  { label: 'Trial Conversions',   current: 42,   previous: 35,   goodWhenUp: true,  unit: '%' },
+  { label: 'Monthly Revenue',     current: 24830, previous: 22090, goodWhenUp: true, unit: '$' }, // +12.4% → below threshold, won't alert
+];
+const ANOMALY_THRESHOLD = 15;
+
+function renderAnomalies() {
+  const banner = document.getElementById('anomaly-banner');
+  if (!banner) return;
+  const alerts = ANOMALY_KPIS.map(k => {
+    const pct = ((k.current - k.previous) / k.previous) * 100;
+    return { ...k, pct };
+  }).filter(k => Math.abs(k.pct) >= ANOMALY_THRESHOLD);
+
+  banner.innerHTML = alerts.map(k => {
+    const up = k.pct > 0;
+    const isGood = up === k.goodWhenUp;
+    const arrow = up ? '▲' : '▼';
+    const emoji = isGood ? '🎉' : '⚠️';
+    const verb = up ? 'jumped' : 'dropped';
+    return `<div class="anomaly-alert ${isGood ? 'anomaly-good' : 'anomaly-bad'}">
+      <span class="a-emoji">${emoji}</span>
+      <div class="a-body"><strong>${k.label}</strong> ${verb}
+        <span class="a-delta">${arrow} ${Math.abs(k.pct).toFixed(1)}%</span>
+        vs last period — ${isGood ? 'great momentum, keep it going.' : 'worth a look today.'}
+      </div>
+      <button class="anomaly-dismiss" onclick="this.parentElement.remove()" title="Dismiss">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ── INVOICE GENERATOR ──
+function money(n) {
+  return '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function renderInvoice() {
+  const client = document.getElementById('inv-client').value.trim();
+  const desc   = document.getElementById('inv-desc').value.trim();
+  const amount = parseFloat(document.getElementById('inv-amount').value) || 0;
+  const due    = document.getElementById('inv-due').value;
+
+  document.getElementById('inv-client-out').textContent = client || 'Client Name';
+  document.getElementById('inv-desc-out').textContent   = desc || 'Service description will appear here.';
+  document.getElementById('inv-amount-cell').textContent = money(amount);
+  document.getElementById('inv-subtotal').textContent    = money(amount);
+  document.getElementById('inv-total').textContent       = money(amount);
+
+  const fmt = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '—';
+  document.getElementById('inv-due-out').textContent = fmt(due);
+  if (!document.getElementById('inv-issued').dataset.set) {
+    // issue date = today, captured once
+    document.getElementById('inv-issued').textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+    document.getElementById('inv-issued').dataset.set = '1';
+    document.getElementById('inv-num').textContent = 'INV-' + String(Math.floor(1000 + (Date.parse(new Date().toDateString()) % 9000))).padStart(4, '0');
+  }
+}
+function printInvoice() {
+  const client = document.getElementById('inv-client').value.trim();
+  const amount = parseFloat(document.getElementById('inv-amount').value) || 0;
+  if (!client || amount <= 0) {
+    alert('Enter at least a client name and an amount greater than 0.');
+    return;
+  }
+  renderInvoice();
+  window.print();
+}
+
+// ── AI CHAT ASSISTANT ──
+let _chatHistory = [];
+let _chatBusy = false;
+
+function toggleChat() {
+  const panel = document.getElementById('chat-panel');
+  const open = panel.classList.toggle('open');
+  if (open) {
+    if (!_chatHistory.length) showChatGreeting();
+    document.getElementById('chat-input').focus();
+  }
+}
+
+function showChatGreeting() {
+  const box = document.getElementById('chat-messages');
+  box.innerHTML = `
+    <div class="chat-msg bot">Hi! I'm your BizCommand AI assistant. Ask me anything about your business data.</div>
+    <div class="chat-suggestions">
+      <span class="chat-chip" onclick="askSuggestion(this)">Why is churn up?</span>
+      <span class="chat-chip" onclick="askSuggestion(this)">What should I focus on today?</span>
+      <span class="chat-chip" onclick="askSuggestion(this)">How's my revenue trending?</span>
+    </div>`;
+}
+
+function askSuggestion(el) {
+  document.getElementById('chat-input').value = el.textContent;
+  sendChat();
+}
+
+function addChatMsg(role, text) {
+  const box = document.getElementById('chat-messages');
+  // remove the suggestion chips once a conversation starts
+  const chips = box.querySelector('.chat-suggestions');
+  if (chips) chips.remove();
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  if (_chatBusy) return;
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addChatMsg('user', msg);
+
+  const box = document.getElementById('chat-messages');
+  const typing = document.createElement('div');
+  typing.className = 'chat-typing';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  box.appendChild(typing);
+  box.scrollTop = box.scrollHeight;
+  _chatBusy = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, history: _chatHistory }),
+      signal: AbortSignal.timeout(30000)
+    });
+    const data = await res.json();
+    typing.remove();
+    if (!res.ok) {
+      addChatMsg('error', data.error || 'Something went wrong.');
+    } else {
+      addChatMsg('bot', data.reply);
+      _chatHistory.push({ role: 'user', content: msg });
+      _chatHistory.push({ role: 'assistant', content: data.reply });
+      if (_chatHistory.length > 20) _chatHistory = _chatHistory.slice(-20);
+    }
+  } catch {
+    typing.remove();
+    addChatMsg('error', "Can't reach the AI server. Make sure server.py is running on :5000.");
+  } finally {
+    _chatBusy = false;
+    document.getElementById('chat-input').focus();
+  }
+}
+
+// ── INIT ──
+renderAnomalies();
+</script>
+</body>
+</html>
